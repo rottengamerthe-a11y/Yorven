@@ -1,0 +1,25 @@
+YORVEN WEBSITE HANDOFF
+
+This archive contains the current Yorven React/Vite website.
+
+Included:
+- src/main.jsx: rendered routes and hero composition
+- src/styles.css: visual system and animations
+- public/: logo, hero assets, favicon, and SEO files
+- package.json and package-lock.json: dependencies and scripts
+- index.html: Vite entry document
+
+To run locally:
+1. Install Node.js.
+2. Open this folder in a terminal.
+3. Run: npm install
+4. Run: npm run dev
+5. Open: http://127.0.0.1:5173/
+
+Current hero details:
+- Deep teal orbital sphere
+- Transparent Yorven Y mark
+- Focus, Signal, and Approach cards
+- Fixed navigation
+- Pointer-responsive hero depth
+- Reduced-motion support
