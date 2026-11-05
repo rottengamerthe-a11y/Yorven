@@ -1,2 +1,23 @@
-.env.example
-/node_modules
+# Dependencies
+node_modules/
+vendor/
+venv/
+
+# Build output
+dist/
+build/
+*.class
+*.pyc
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Secrets & Configs
+.env
+*.key   
