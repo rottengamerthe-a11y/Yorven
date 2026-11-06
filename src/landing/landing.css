@@ -19,7 +19,41 @@
 .motion-ready .lp-grid > .lp-card.stagger-reveal,
 .motion-ready .lp-faq-item.stagger-reveal { transition-delay: calc(var(--i, 0) * 80ms); }
 
-/* ---------- 1. hero ---------- */
+/* ---------- 1. hero: cloud sky ---------- */
+.lp-hero-wrap { position: relative; isolation: isolate; overflow: hidden; margin-top: -80px; padding-top: 80px; padding-bottom: 60px; margin-bottom: -1px; color: var(--cream); }
+/* dissolve the sky into the dark section below, so there is no visible edge */
+.lp-hero-wrap::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgba(8, 45, 44, 0) 0%, rgba(8, 45, 44, .2) 30%, rgba(8, 45, 44, .6) 62%, #082d2c 100%); }
+@media (max-width: 900px) { .lp-hero-wrap { margin-top: -64px; padding-top: 64px; padding-bottom: 50px; } .lp-hero-wrap::after { height: 260px; } }
+
+/* the sky: darkest overhead, brightest at the horizon (bottom), as seen looking up from the ground */
+.lp-sky { position: absolute; inset: 0; z-index: -1; background: linear-gradient(to bottom, #04201f 0%, #08302e 30%, #0d4543 58%, #1b6a63 84%, #4f9e90 100%); }
+.lp-sky::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4, 28, 27, .7) 0%, rgba(4, 28, 27, .4) 50%, rgba(4, 28, 27, 0) 76%); }
+.lp-sky-glow { position: absolute; inset: 0; background: radial-gradient(ellipse 70% 34% at 50% 86%, rgba(215, 237, 131, .5), rgba(201, 235, 170, .16) 45%, transparent 72%); animation: lp-breathe 9s ease-in-out infinite; }
+@keyframes lp-breathe { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+
+/* cloud layers: a flat plane tilted into perspective so it recedes toward the horizon at the bottom */
+.lp-clouds { position: absolute; inset: 0; overflow: hidden; perspective: 460px; perspective-origin: 50% 105%; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); }
+.lp-cloud-plane { position: absolute; left: -60%; width: 220%; top: -35%; height: 150%; transform-origin: 50% 100%; transform: rotateX(-62deg); transform-style: flat; overflow: hidden; }
+.lp-cloud-tex { position: absolute; inset: 0 auto 0 0; width: 200%; background-repeat: repeat; will-change: transform; animation: lp-drift var(--drift, 140s) linear infinite; }
+@keyframes lp-drift { to { transform: translate3d(-50%, 0, 0); } }
+
+.lp-clouds-far { opacity: .55; --drift: 220s; }
+.lp-clouds-far .lp-cloud-tex { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='700'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0045 0.0095' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.86  0 0 0 0 0.95  0 0 0 0 0.92  2.7 0 0 0 -1.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E"); background-size: 1400px 700px; }
+.lp-clouds-near { --drift: 130s; filter: blur(.4px); }
+.lp-clouds-near .lp-cloud-tex { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1800' height='900'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0032 0.0068' numOctaves='6' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.97  0 0 0 0 0.98  0 0 0 0 0.94  3.1 0 0 0 -1.36'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E"); background-size: 1800px 900px; }
+
+/* light text on the dark sky */
+.lp-hero-wrap h1, .lp-hero-wrap h1 span, .lp-hero-wrap h1 em { color: var(--cream); }
+.lp-hero-wrap h1 .lime { color: var(--lime); }
+.lp-hero-wrap h1 .word-deserves { color: var(--mint); }
+.lp-hero-wrap .headline-mark path { stroke: var(--lime); }
+.lp-hero-wrap .lede { color: #dbe8cc; }
+.lp-hero-wrap .text-link { color: var(--cream); border-color: rgba(244, 240, 230, .45); }
+.lp-hero-wrap .lp-trust li { color: #eaf2d8; }
+.lp-hero-wrap .hero-scroll { color: var(--mint); }
+.lp-hero-wrap .scroll-line { background: rgba(201, 235, 170, .5); }
+.lp-hero-wrap .hero-art { box-shadow: 0 30px 60px rgba(0, 0, 0, .22); outline: 1px solid rgba(215, 237, 131, .2); outline-offset: -1px; }
+
 @media (min-width: 901px) { .lp-hero { grid-template-columns: minmax(0, 1.2fr) minmax(380px, .8fr); } }
 .lp-hero h1 { font-size: clamp(34px, 3.9vw, 58px); }
 @media (min-width: 1001px) { .lp-hero .hero-line { white-space: nowrap; } }
@@ -29,7 +63,7 @@
 .lp-trust svg { flex: none; padding: 3px; width: 20px; height: 20px; background: var(--green); color: #fff; border-radius: 50%; }
 
 /* ---------- 2. social proof ---------- */
-.lp-proof-grid { grid-template-columns: repeat(3, 1fr); }
+.lp-proof-grid { grid-template-columns: repeat(var(--cols, 3), 1fr); }
 .lp-proof { position: relative; margin: 0; padding: 30px 28px; background: #0d3a37; border: 1px solid var(--line-dark); display: flex; flex-direction: column; }
 .lp-stat { color: var(--lime); font-size: clamp(48px, 5.4vw, 80px); font-weight: 700; line-height: .95; letter-spacing: -.06em; }
 .lp-stat-label { min-height: 3em; margin: 12px 0 26px; color: var(--mint); font: 12px/1.5 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
@@ -37,6 +71,17 @@
 .lp-proof figcaption { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line-dark); display: grid; gap: 2px; font-size: 13px; }
 .lp-proof figcaption span { color: #9fbfa8; }
 .lp-sample { align-self: flex-start; margin-bottom: 18px; padding: 5px 8px; border: 1px dashed var(--lime); color: var(--lime); font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.lp-proof-body { display: flex; flex: 1; flex-direction: column; }
+.lp-proof-summary { margin: 0 0 22px; color: #eaf1c6; font-size: clamp(17px, 1.7vw, 21px); line-height: 1.5; letter-spacing: -.025em; }
+.lp-points { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; padding: 0; list-style: none; }
+.lp-points li { padding: 6px 10px; border: 1px solid #47736b; color: var(--mint); font: 11px var(--mono); letter-spacing: .04em; }
+.lp-proof-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; width: fit-content; color: var(--lime); font-weight: 700; border-bottom: 1px solid rgba(215, 237, 131, .5); }
+.lp-proof-link:hover { border-bottom-color: var(--lime); }
+.lp-case { display: grid; grid-template-columns: .8fr 1.2fr; gap: 56px; align-items: center; padding: 44px 44px 40px; }
+.lp-case .lp-stat { font-size: clamp(64px, 8vw, 120px); }
+.lp-case .lp-stat-label { min-height: 0; margin-bottom: 0; }
+.lp-case .lp-sample { grid-column: 1 / -1; margin-bottom: 0; }
+.lp-case figcaption { margin-top: 0; }
 .lp-concepts-after { margin-top: 72px; }
 .lp-dark .work-visual { background: #0d3a37; border: 1px solid var(--line-dark); }
 .lp-dark .work-meta p { color: #9fbfa8; }
@@ -73,7 +118,7 @@
 .lp-benefit { margin-top: auto !important; padding-top: 20px; }
 .lp-benefit b { display: block; margin-bottom: 6px; color: var(--lime); font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
 .lp-benefit { color: var(--cream) !important; font-size: 15px !important; }
-.lp-services { margin-top: 110px; }
+.lp-services { margin-top: 110px; scroll-margin-top: 96px; }
 .lp-services .eyebrow { margin-bottom: 28px; }
 
 /* feature visuals */
@@ -153,6 +198,7 @@
 /* ---------- responsive ---------- */
 @media (max-width: 1000px) {
   .lp-feature-grid, .lp-proof-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-case { grid-template-columns: 1fr; gap: 28px; padding: 32px 28px; }
   .lp-steps { grid-template-columns: repeat(2, 1fr); }
   .lp-faq { grid-template-columns: 1fr; gap: 40px; }
   .lp-faq-head { position: static; }
@@ -163,5 +209,9 @@
   .lp-section .section-heading { margin-bottom: 38px; }
   .lp-feature-grid, .lp-proof-grid, .lp-pain-grid, .lp-steps { grid-template-columns: 1fr; }
   .lp-calc-inputs, .lp-calc-result { padding: 28px 22px; }
+  .lp-case { padding: 28px 22px; }
   .lp-pain { padding: 26px 22px; }
 }
+
+/* a single proof card always spans the full width, at every screen size */
+.lp-proof-grid[data-count="1"] { grid-template-columns: 1fr; }

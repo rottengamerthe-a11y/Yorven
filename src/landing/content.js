@@ -19,14 +19,25 @@ export const HERO = {
 
 /* 2. SOCIAL PROOF -------------------------------------------------------------------------- */
 /*
- * Put REAL client results here and delete the sample ones. Never publish invented numbers.
- * Entries with  sample: true  are only shown while you run `npm run dev`; they are hidden in the
- * production build, so a placeholder can never go live by accident.
+ * Real shipped work only. Never publish invented numbers or quotes.
+ * Entries with  sample: true  are a dev-only preview (hidden in the production build).
+ *
+ * A card can have: stat + statLabel, summary, points (chips), quote + person, who, link.
+ * Everything except stat, statLabel and who is optional.
  */
 export const PROOF = [
-  { sample: true, stat: '00%', statLabel: 'Describe the real result, e.g. faster page loads', who: 'Client name · Industry', quote: 'A short, real quote from this client about working with you.', person: 'Their name, role' },
-  { sample: true, stat: '0×', statLabel: 'Another real result, e.g. more enquiries', who: 'Client name · Industry', quote: 'A short, real quote from this client about working with you.', person: 'Their name, role' },
-  { sample: true, stat: '0 wks', statLabel: 'A real result, e.g. time from kickoff to launch', who: 'Client name · Industry', quote: 'A short, real quote from this client about working with you.', person: 'Their name, role' }
+  {
+    stat: 'Live',
+    statLabel: 'on Google Play, built end to end',
+    summary: 'A learning app for Modern Classes Patna, a coaching institute: live classes and recorded lectures, mock tests with instant rankings, Hindi and English notes, a doubts desk and a student dashboard.',
+    points: ['Live classes', 'Mock tests', 'Bilingual notes', 'Doubts desk'],
+    who: 'Modern Classes Patna · Coaching institute',
+    link: { label: 'View on Google Play', href: 'https://play.google.com/store/apps/details?id=com.modernclasses.patna.modern_classes_patna' }
+  }
+
+  /* Template for the next one (add a real quote only with the client's permission):
+  { stat: '2.4×', statLabel: 'more enquiries in 3 months', quote: 'What the client said, in their words.', person: 'Name, Role', who: 'Business · Industry' },
+  */
 ]
 
 /* 3. PROBLEM ------------------------------------------------------------------------------- */
@@ -83,14 +94,42 @@ export const FAQ = {
   eyebrow: 'Questions',
   title: ['Things people ask', 'before they start.'],
   items: [
-    { q: 'How much will it cost?', a: 'It depends on what you’re building. Every project gets a written, fixed quote before we start, so you know the number up front. The enquiry form has INR budget ranges to help us point you in the right direction.' }, // CONFIRM
-    { q: 'How long does it take?', a: 'It depends on scope: a focused website is much quicker than a full product. Your plan includes a timeline broken into weekly milestones, so you know what to expect before you commit.' },
-    { q: 'I don’t know exactly what I need. Can I still start?', a: 'Yes, most people don’t at the beginning. Tell us the problem you’re trying to solve and we’ll help shape the scope in your plan.' },
-    { q: 'Who owns the code and designs?', a: 'You do. Everything we build is handed over to you at launch.' }, // CONFIRM
-    { q: 'What if I’m not happy part-way through?', a: 'We work in milestones and you approve each one before the next begins, so you can steer, pause or stop at a milestone instead of finding out at the end.' }, // CONFIRM
-    { q: 'Do you work with clients outside India?', a: 'Yes. We work with teams in India and abroad, and keep in touch over email, WhatsApp and video calls.' },
-    { q: 'What happens after launch?', a: 'We hand everything over, and can stay on for fixes and improvements if you’d like us to.' }, // CONFIRM
-    { q: 'Who will I actually talk to?', a: 'The people building your product. There’s no account-manager layer between you and the team.' } // CONFIRM
+    {
+      q: 'How much does a project cost?',
+      a: 'Every project receives a fixed-price USD proposal with clear milestone deliverables and guaranteed timelines before work begins. Focused marketing sites and web apps typically range between $4,000 and $12,000, while comprehensive MVPs, mobile applications, and high-scale systems range between $15,000 and $35,000. You know the exact number upfront—no hidden overages or surprise hourly billing.'
+    },
+    {
+      q: 'How do international payments and contracts work?',
+      a: 'We partner with founders and product teams globally across the US, UK, Europe, Australia, and worldwide. Contracts and invoices are in USD, and payments are settled securely via Stripe (major credit cards) or international wire transfer (SWIFT / ACH). You review and approve each weekly milestone build before releasing payment for the next stage.'
+    },
+    {
+      q: 'How do you handle time zones and communication?',
+      a: 'We support global clients smoothly with dedicated Slack or Discord channels, regular async video walkthroughs (Loom), and weekly working demos scheduled during overlapping hours that suit your local time zone.'
+    },
+    {
+      q: 'How long does an engagement typically take?',
+      a: 'A focused website, interactive landing page, or redesign typically takes 2 to 3 weeks. A full custom MVP, SaaS platform, or mobile application launches in 4 to 8 weeks, shipped in verified weekly milestone builds.'
+    },
+    {
+      q: 'I don’t have a complete specification. Can we still start?',
+      a: 'Yes—most founders come to us with a vision and business goals rather than a technical spec. We run a rapid scoping process to define user journeys, system architecture, and core features, turning them into a concrete, fixed-price launch plan.'
+    },
+    {
+      q: 'Who owns the intellectual property, code, and designs?',
+      a: 'You do, 100%. All source code (GitHub/GitLab repositories), Figma design files, cloud infrastructure accounts, and production assets are transferred to your company upon launch. We never hold back code or lock you in.'
+    },
+    {
+      q: 'What if I want to adjust scope or pause part-way through?',
+      a: 'Because we work in weekly milestones and you approve each one before the next begins, you can easily steer priorities, refine features, or pause the engagement between milestones without penalty.'
+    },
+    {
+      q: 'What happens after launch?',
+      a: 'Every build includes a 30-day post-launch warranty for bug fixes and performance tuning. Afterwards, we offer flexible monthly engineering retainer support or a clean handoff to your internal team.'
+    },
+    {
+      q: 'Who will I actually be working with?',
+      a: 'Senior product designers and full-stack software engineers actively writing your code. You communicate directly with the builders—no junior account managers or sales middlemen in between.'
+    }
   ]
 }
 

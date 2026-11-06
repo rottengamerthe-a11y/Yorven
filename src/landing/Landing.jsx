@@ -6,7 +6,7 @@ import './landing.css'
 
 /* ---------- helpers ---------- */
 
-const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 function motionReduced() {
   const mode = document.documentElement.dataset.motion
@@ -49,36 +49,117 @@ function Heading({ lines, className = '' }) {
 export function Hero() {
   const heroLines = HERO.lines
   const perLine = Math.max(...heroLines.map((l) => l.length))
-  return <section className="hero lp-hero container scroll-reveal is-visible">
-    <div className="hero-copy reveal">
-      <h1 aria-label={heroLines.map((l) => l.join(' ')).join(' ')}>
-        {heroLines.map((line, lineIndex) => <span className="hero-line" key={lineIndex}>
-          {line.map((word, wordIndex) => <React.Fragment key={word}>
-            {word === HERO.highlight
-              ? <em className="hero-word word-deserves" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}<span className="headline-mark" aria-hidden="true"><svg viewBox="0 0 180 24" role="presentation"><path d="M4 17 C 42 5, 85 23, 176 7" /></svg></span></em>
-              : <span className="hero-word" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}</span>}
-            {wordIndex < line.length - 1 ? ' ' : ''}
-          </React.Fragment>)}
-          {lineIndex === heroLines.length - 1 && <span className="lime">.</span>}
-        </span>)}
-      </h1>
-      <p className="lede">{HERO.lede}</p>
-      <div className="hero-actions">
-        <Link className="button button-lime" to={HERO.primary.to}>{HERO.primary.label} <ArrowUpRight size={17} /></Link>
-        <a className="text-link" href={HERO.secondary.href}>{HERO.secondary.label} <ArrowDownRight size={17} /></a>
+  return <section className="lp-hero-wrap" data-theme="teal">
+    <div className="lp-sky" aria-hidden="true">
+      <div className="lp-sky-glow" />
+      <div className="lp-clouds lp-clouds-far"><div className="lp-cloud-plane"><div className="lp-cloud-tex" /></div></div>
+      <div className="lp-clouds lp-clouds-near"><div className="lp-cloud-plane"><div className="lp-cloud-tex" /></div></div>
+    </div>
+    <div className="hero lp-hero container scroll-reveal is-visible">
+      <div className="hero-copy reveal">
+        <h1 aria-label={heroLines.map((l) => l.join(' ')).join(' ')}>
+          {heroLines.map((line, lineIndex) => <span className="hero-line" key={lineIndex}>
+            {line.map((word, wordIndex) => <React.Fragment key={word}>
+              {word === HERO.highlight
+                ? <em className="hero-word word-deserves" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}<span className="headline-mark" aria-hidden="true"><svg viewBox="0 0 180 24" role="presentation"><path d="M4 17 C 42 5, 85 23, 176 7" /></svg></span></em>
+                : <span className="hero-word" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}</span>}
+              {wordIndex < line.length - 1 ? ' ' : ''}
+            </React.Fragment>)}
+            {lineIndex === heroLines.length - 1 && <span className="lime">.</span>}
+          </span>)}
+        </h1>
+        <p className="lede">{HERO.lede}</p>
+        <div className="hero-actions">
+          <Link className="button button-lime" to={HERO.primary.to}>{HERO.primary.label} <ArrowUpRight size={17} /></Link>
+          <a className="text-link" href={HERO.secondary.href}>{HERO.secondary.label} <ArrowDownRight size={17} /></a>
+        </div>
+        <ul className="lp-trust" aria-label="What you can count on">
+          {HERO.trust.map((item) => <li key={item}><Check size={15} strokeWidth={2.5} />{item}</li>)}
+        </ul>
       </div>
-      <ul className="lp-trust" aria-label="What you can count on">
-        {HERO.trust.map((item) => <li key={item}><Check size={15} strokeWidth={2.5} />{item}</li>)}
-      </ul>
+      <div className="hero-art reveal" aria-label="Real digital products engineered by Yorven">
+        <div className="hero-canvas-grid" aria-hidden="true" />
+
+        {/* 1. Desktop Dashboard: ProofPay (PayperAI) */}
+        <div className="hero-card hero-card-desktop">
+          <div className="h-card-bar">
+            <span className="dot dot-teal" />
+            <span className="dot dot-teal" />
+            <span className="dot dot-teal" />
+            <span className="h-bar-url">proofpay.ai</span>
+            <span className="h-bar-badge">Live System</span>
+          </div>
+          <div className="h-desktop-content">
+            <div className="h-desktop-kpis">
+              <div className="h-dkpi">
+                <small>OUTSTANDING</small>
+                <strong>$34,500</strong>
+              </div>
+              <div className="h-dkpi">
+                <small>AUTO-RECOVERED</small>
+                <strong className="text-green">$104,200</strong>
+              </div>
+            </div>
+            <div className="h-desktop-rows">
+              <div className="h-drow alert">
+                <div className="h-drow-meta">
+                  <b>Apex Logistics Ltd</b>
+                  <small>INV-041 · 16d overdue</small>
+                </div>
+                <span className="h-drow-amt">$8,500</span>
+              </div>
+              <div className="h-drow">
+                <div className="h-drow-meta">
+                  <b>Kinetix Cloud Corp</b>
+                  <small>INV-039 · Due in 3d</small>
+                </div>
+                <span className="h-drow-amt">$14,200</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Mobile Device: Racers Vault (Porsche 911 GT3 R Grello) */}
+        <div className="hero-card hero-card-phone">
+          <div className="h-phone-notch"><span /></div>
+          <div className="h-phone-screen">
+            <img
+              src="/projects/racers-vault/porsche-gt3r-grello.jpg"
+              alt="Porsche 911 GT3 R Grello in Racers Vault"
+              className="h-phone-img"
+            />
+          </div>
+        </div>
+
+        {/* 3. Bot Platform: Aurix Discord Engine (Replaces bottom-left panel) */}
+        <div className="hero-panel panel-aurix">
+          <div className="h-bot-id">
+            <div className="h-bot-avatar-wrap">
+              <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="h-bot-avatar-img" />
+            </div>
+            <div className="h-bot-title-row">
+              <strong>Aurix</strong>
+              <span className="h-bot-app">APP</span>
+            </div>
+            <span className="h-bot-shards">● 16 Shards</span>
+          </div>
+          <div className="h-bot-embed">
+            <div className="h-embed-title">
+              <span className="h-spin-icon">✨</span>
+              <b>Spin Complete • SUCCESS</b>
+            </div>
+            <p className="h-embed-payout">
+              Gained <b>154 aura</b> & <b>103 XP</b>
+            </p>
+            <div className="h-embed-row">
+              <span className="h-cmd-pill">/spin</span>
+              <span className="h-wallet-note">174,381 aura</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="hero-scroll"><span>Scroll to explore</span><div className="scroll-line" /></div>
     </div>
-    <div className="hero-art reveal" aria-label="Concept product interface studies">
-      <div className="hero-canvas-grid" aria-hidden="true" />
-      <div className="device device-dashboard"><div className="device-bar"><span /><span /><span /></div><div className="device-dashboard-grid"><i /><i /><i /><i /><i /><i /></div><strong>Northstar</strong><small>Product systems</small></div>
-      <div className="device device-phone"><div className="device-notch" /><strong>$4,820</strong><small>Lumen / balance overview</small><div className="device-chart" /></div>
-      <div className="hero-panel panel-focus"><span className="panel-index">01 / WEB</span><strong>Useful<br /><em>by design.</em></strong><small>Interfaces that clarify the next step.</small></div>
-      <div className="hero-panel panel-signal"><span className="panel-index">02 / PRODUCT</span><strong>Built for<br /><em>real use.</em></strong><div className="panel-bars"><i /><i /><i /><i /><i /></div></div>
-    </div>
-    <div className="hero-scroll"><span>Scroll to explore</span><div className="scroll-line" /></div>
   </section>
 }
 
@@ -87,29 +168,42 @@ export function Hero() {
 export function Proof({ concepts }) {
   const real = PROOF.filter((p) => !p.sample)
   // Sample entries are a dev-only preview: they never appear in the production build.
-  const items = real.length ? real : (import.meta.env.DEV ? PROOF : [])
+  const items = real.length ? real : (import.meta.env.DEV ? PROOF.filter((p) => p.sample) : [])
   if (!items.length && !concepts) return null
   const hasResults = items.length > 0
+  const hasQuotes = items.some((p) => p.quote)
+  const eyebrow = !hasResults ? 'Proof of craft' : hasQuotes ? 'Results' : 'Shipped work'
+  const lines = !hasResults ? ['Concept work that shows', 'how we think and build.'] : hasQuotes ? ['What people got', 'when we built this for them.'] : ['Real projects,', 'built and live.']
+  const intro = !hasResults
+    ? 'Fictional projects, clearly labelled as concepts, built to the standard we bring to client work.'
+    : hasQuotes ? 'Real projects, real outcomes, in our clients’ own words.' : 'Not concepts: products we designed, built and published.'
   return <section id="proof" className="section lp-section lp-dark scroll-reveal" data-theme="teal">
     <div className="container">
       <div className="section-heading">
-        <div>
-          <p className="eyebrow">{hasResults ? 'Results' : 'Proof of craft'}</p>
-          <Heading lines={hasResults ? ['What people got', 'when we built this for them.'] : ['Concept work that shows', 'how we think and build.']} />
-        </div>
-        <p className="section-intro">{hasResults ? 'Real projects, real outcomes, in our clients’ own words.' : 'Fictional projects, clearly labelled as concepts, built to the standard we bring to client work.'}</p>
+        <div><p className="eyebrow">{eyebrow}</p><Heading lines={lines} /></div>
+        <p className="section-intro">{intro}</p>
       </div>
-      {hasResults && <div className="lp-grid lp-proof-grid">
-        {items.map((p, i) => <figure className="lp-card lp-proof stagger-reveal" style={{ '--i': i }} key={`${p.stat}-${i}`}>
+      {hasResults && <div className="lp-grid lp-proof-grid" data-count={items.length} style={{ '--cols': Math.min(items.length, 3) }}>
+        {items.map((p, i) => <figure className={`lp-card lp-proof stagger-reveal ${p.summary ? 'lp-case' : ''}`} style={{ '--i': i }} key={`${p.stat}-${i}`}>
           {p.sample && <span className="lp-sample">Sample · replace in content.js</span>}
-          <div className="lp-stat">{p.stat}</div>
-          <p className="lp-stat-label">{p.statLabel}</p>
-          <blockquote>“{p.quote}”</blockquote>
-          <figcaption><b>{p.person}</b><span>{p.who}</span></figcaption>
+          <div className="lp-proof-main">
+            <div className="lp-stat">{p.stat}</div>
+            <p className="lp-stat-label">{p.statLabel}</p>
+          </div>
+          <div className="lp-proof-body">
+            {p.summary && <p className="lp-proof-summary">{p.summary}</p>}
+            {p.points && <ul className="lp-points">{p.points.map((pt) => <li key={pt}>{pt}</li>)}</ul>}
+            {p.quote && <blockquote>“{p.quote}”</blockquote>}
+            <figcaption>
+              {p.person && <b>{p.person}</b>}
+              <span>{p.who}</span>
+              {p.link && <a className="lp-proof-link" href={p.link.href} target="_blank" rel="noopener noreferrer">{p.link.label} <ArrowUpRight size={15} /></a>}
+            </figcaption>
+          </div>
         </figure>)}
       </div>}
       {concepts && <div className={`lp-concepts ${hasResults ? 'lp-concepts-after' : ''}`}>
-        {hasResults && <p className="eyebrow">Concept work</p>}
+        {hasResults && <p className="eyebrow">Featured Products & Platforms</p>}
         <div className="work-grid">{concepts}</div>
       </div>}
     </div>
@@ -120,19 +214,19 @@ export function Proof({ concepts }) {
 
 function CostOfDelay() {
   const c = PROBLEM.calc
-  const [value, setValue] = useState(150000)
+  const [value, setValue] = useState(10000)
   const [months, setMonths] = useState(3)
   const shown = useCountUp(value * months)
   return <div className="lp-calc stagger-reveal">
     <div className="lp-calc-inputs">
       <p className="eyebrow">{c.title}</p>
-      <label htmlFor="lp-value">{c.valueLabel}<output>{inr.format(value)} / month</output></label>
-      <input id="lp-value" className="lp-range" type="range" min="20000" max="1000000" step="10000" value={value} onChange={(e) => setValue(Number(e.target.value))} />
+      <label htmlFor="lp-value">{c.valueLabel}<output>{usd.format(value)} / month</output></label>
+      <input id="lp-value" className="lp-range" type="range" min="1000" max="50000" step="1000" value={value} onChange={(e) => setValue(Number(e.target.value))} />
       <label htmlFor="lp-months">{c.monthsLabel}<output>{months} {months === 1 ? 'month' : 'months'}</output></label>
       <input id="lp-months" className="lp-range" type="range" min="1" max="12" step="1" value={months} onChange={(e) => setMonths(Number(e.target.value))} />
     </div>
     <div className="lp-calc-result" aria-live="polite">
-      <span className="lp-calc-number">{inr.format(Math.round(shown))}</span>
+      <span className="lp-calc-number">{usd.format(Math.round(shown))}</span>
       <span className="lp-calc-label">{c.resultLabel}</span>
       <p>{c.footnote}</p>
     </div>
@@ -220,7 +314,7 @@ function Visual({ name }) {
 }
 
 export function Solution({ servicesSlot }) {
-  return <section id="services" className="section lp-section lp-dark scroll-reveal" data-theme="teal">
+  return <section id="solution" className="section lp-section lp-dark scroll-reveal" data-theme="teal">
     <div className="container">
       <div className="section-heading">
         <div><p className="eyebrow">{SOLUTION.eyebrow}</p><Heading lines={SOLUTION.title} /></div>
@@ -236,7 +330,7 @@ export function Solution({ servicesSlot }) {
           </div>
         </article>)}
       </div>
-      {servicesSlot && <div className="lp-services">
+      {servicesSlot && <div id="services" className="lp-services">
         <p className="eyebrow">{SOLUTION.servicesEyebrow}</p>
         {servicesSlot}
       </div>}
