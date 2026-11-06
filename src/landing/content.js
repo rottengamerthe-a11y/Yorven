@@ -29,7 +29,7 @@ export const PROOF = [
   {
     stat: 'Live',
     statLabel: 'on Google Play, built end to end',
-    summary: 'A learning app for Modern Classes Patna, a coaching institute: live classes and recorded lectures, mock tests with instant rankings, Hindi and English notes, a doubts desk and a student dashboard.',
+    summary: 'A learning app for Modern Classes Patna, a coaching institute: live classes and recorded lectures, mock tests with automated evaluation, Hindi and English notes, a doubts desk and a student dashboard.',
     points: ['Live classes', 'Mock tests', 'Bilingual notes', 'Doubts desk'],
     who: 'Modern Classes Patna · Coaching institute',
     link: { label: 'View on Google Play', href: 'https://play.google.com/store/apps/details?id=com.modernclasses.patna.modern_classes_patna' }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowDownRight, ArrowUpRight, Check, Plus } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Check, ClipboardCheck, FileText, MessageSquare, Plus, Smartphone, Sparkles, Users } from 'lucide-react'
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
 import './landing.css'
 
@@ -163,6 +163,86 @@ export function Hero() {
   </section>
 }
 
+function ModernClassesMockup() {
+  return (
+    <div className="modern-app-mockup" aria-hidden="true">
+      <div className="modern-phone-frame">
+        {/* Dynamic Status Bar */}
+        <div className="m-phone-status">
+          <span>9:41</span>
+          <div className="m-speaker-notch" />
+          <div className="m-phone-icons">
+            <span>5G</span>
+            <span>100%</span>
+          </div>
+        </div>
+
+        {/* App Header with Official Circular Logo */}
+        <div className="m-app-header">
+          <div className="m-app-brand">
+            <img src="/modern-classes-logo.jpg" alt="Modern Classes Patna" className="m-app-logo-img" />
+            <div>
+              <strong>Modern Classes</strong>
+              <small>Student Learning Portal</small>
+            </div>
+          </div>
+          <span className="m-batch-badge">JEE & NEET</span>
+        </div>
+
+        {/* Live Classroom Stream Widget */}
+        <div className="m-live-stream-card">
+          <div className="m-stream-preview">
+            <div className="m-stream-meta-top">
+              <span className="m-live-pill"><span className="m-live-dot" /> LIVE CLASS</span>
+              <span className="m-viewer-count"><Users size={11} /> Lecture Stream</span>
+            </div>
+            <div className="m-stream-overlay">
+              <span className="m-stream-subject">Physics: Vectors & Mechanics</span>
+              <small>Recorded Archive Available</small>
+            </div>
+          </div>
+        </div>
+
+        {/* Automated Practice Mock Test Evaluation Widget */}
+        <div className="m-mock-rank-card">
+          <div className="m-rank-header">
+            <span className="m-rank-title"><ClipboardCheck size={13} className="text-lime" /> Practice Mock Test</span>
+            <span className="m-rank-badge">Instant Key</span>
+          </div>
+          <div className="m-rank-stats">
+            <div>
+              <small>TEST FORMAT</small>
+              <strong>Timed MCQ</strong>
+            </div>
+            <div>
+              <small>EVALUATION</small>
+              <strong className="text-lime">Automated</strong>
+            </div>
+            <div>
+              <small>SOLUTIONS</small>
+              <strong>Bilingual</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Bilingual Notes & Doubts Bar */}
+        <div className="m-quick-vault">
+          <div className="m-vault-item">
+            <FileText size={13} className="text-mint" />
+            <span>Kinematics (Hindi + English)</span>
+            <span className="m-vault-dl">PDF</span>
+          </div>
+          <div className="m-vault-item">
+            <MessageSquare size={13} className="text-lime" />
+            <span>Student Doubts Desk</span>
+            <span className="m-vault-status">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ---------- 2. SOCIAL PROOF ---------- */
 
 export function Proof({ concepts }) {
@@ -187,17 +267,47 @@ export function Proof({ concepts }) {
         {items.map((p, i) => <figure className={`lp-card lp-proof stagger-reveal ${p.summary ? 'lp-case' : ''}`} style={{ '--i': i }} key={`${p.stat}-${i}`}>
           {p.sample && <span className="lp-sample">Sample · replace in content.js</span>}
           <div className="lp-proof-main">
-            <div className="lp-stat">{p.stat}</div>
-            <p className="lp-stat-label">{p.statLabel}</p>
+            <div className="lp-proof-stat-block">
+              <span className="lp-live-badge"><span className="live-dot" /> LIVE IN PRODUCTION</span>
+              <div className="lp-stat">{p.stat}</div>
+              <p className="lp-stat-label">{p.statLabel}</p>
+            </div>
+            <ModernClassesMockup />
           </div>
           <div className="lp-proof-body">
+            <div className="lp-proof-tag-row">
+              <span className="lp-proof-prod-badge">
+                <Smartphone size={13} /> Official Android App · Google Play
+              </span>
+              <span className="lp-proof-pill">
+                Custom Mobile Learning Portal
+              </span>
+            </div>
             {p.summary && <p className="lp-proof-summary">{p.summary}</p>}
-            {p.points && <ul className="lp-points">{p.points.map((pt) => <li key={pt}>{pt}</li>)}</ul>}
+            {p.points && (
+              <ul className="lp-points modern-points">
+                <li><span className="pt-dot" /> Live Classes & Video Vault</li>
+                <li><span className="pt-dot" /> Automated Mock Tests</li>
+                <li><span className="pt-dot" /> Bilingual Notes (Hindi + Eng)</li>
+                <li><span className="pt-dot" /> Student Doubts Desk</li>
+              </ul>
+            )}
             {p.quote && <blockquote>“{p.quote}”</blockquote>}
-            <figcaption>
-              {p.person && <b>{p.person}</b>}
-              <span>{p.who}</span>
-              {p.link && <a className="lp-proof-link" href={p.link.href} target="_blank" rel="noopener noreferrer">{p.link.label} <ArrowUpRight size={15} /></a>}
+            <figcaption className="lp-proof-caption">
+              <div>
+                <b>{p.person || 'Modern Classes Patna'}</b>
+                <span>{p.who}</span>
+              </div>
+              {p.link && (
+                <a
+                  className="button button-lime lp-proof-cta-btn"
+                  href={p.link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {p.link.label} <ArrowUpRight size={16} />
+                </a>
+              )}
             </figcaption>
           </div>
         </figure>)}

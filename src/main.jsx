@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Activity, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Check, ChevronDown, Cpu, ExternalLink, FileText, Globe, Layers, LayoutDashboard, Menu, Search, ShieldCheck, Sparkles, Terminal, X, Zap } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Check, ChevronDown, Cpu, ExternalLink, FileText, Globe, Layers, LayoutDashboard, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, X, Zap } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { pageMeta, services, work } from './data/site'
@@ -401,7 +401,19 @@ function ServiceCards() {
     io.observe(list)
     return () => io.disconnect()
   }, [])
-  return <div className="service-list" ref={listRef}>{services.map((service, i) => <ServiceRow key={service.number} service={service} open={active === i} onToggle={() => setActive(active === i ? null : i)} />)}</div>
+  return (
+    <div className="service-list" ref={listRef}>
+      {services.map((service, i) => (
+        <ServiceRow
+          key={service.number}
+          service={service}
+          open={active === i}
+          onToggle={() => setActive(active === i ? null : i)}
+          index={i}
+        />
+      ))}
+    </div>
+  )
 }
 
 function Home() {
@@ -420,7 +432,108 @@ function Home() {
 
 
 
-function ServiceRow({ service, open, onToggle }) {
+function ServiceVisual({ number }) {
+  if (number === '01') {
+    return (
+      <div className="service-visual-box website-visual" aria-hidden="true">
+        <div className="sv-browser-bar">
+          <div className="sv-dots">
+            <span className="sv-dot dot-red" />
+            <span className="sv-dot dot-yellow" />
+            <span className="sv-dot dot-green" />
+          </div>
+          <span className="sv-url">
+            <Lock size={10} /> platform.yorven.studio
+          </span>
+          <span className="sv-score-pill">
+            <Sparkles size={10} /> 100 Perf
+          </span>
+        </div>
+        <div className="sv-browser-body">
+          <div className="sv-mock-hero">
+            <div className="sv-mock-h1" />
+            <div className="sv-mock-sub" />
+          </div>
+          <div className="sv-mock-features">
+            <span className="sv-mfeat">Fluid Motion</span>
+            <span className="sv-mfeat">Design System</span>
+            <span className="sv-mfeat">0.3s LCP</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (number === '02') {
+    return (
+      <div className="service-visual-box product-visual" aria-hidden="true">
+        <div className="sv-app-bar">
+          <div className="sv-app-title">
+            <LayoutDashboard size={12} /> app.yorven.io
+          </div>
+          <span className="sv-status-pill green">
+            <span className="sv-pulse-dot" /> Live Session
+          </span>
+        </div>
+        <div className="sv-app-body">
+          <div className="sv-kpi-grid">
+            <div className="sv-kpi-card">
+              <small>ACTIVE USERS</small>
+              <strong>14,820</strong>
+              <span className="sv-trend">+18.4%</span>
+            </div>
+            <div className="sv-kpi-card">
+              <small>API LATENCY</small>
+              <strong>24ms</strong>
+              <span className="sv-trend">Real-time</span>
+            </div>
+          </div>
+          <div className="sv-flow-row">
+            <span className="sv-flow-node">Auth</span>
+            <span className="sv-flow-arrow">→</span>
+            <span className="sv-flow-node">Realtime DB</span>
+            <span className="sv-flow-arrow">→</span>
+            <span className="sv-flow-node active">Reactive UI</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="service-visual-box systems-visual" aria-hidden="true">
+      <div className="sv-term-bar">
+        <div className="sv-term-title">
+          <Terminal size={12} /> api.engine.internal
+        </div>
+        <span className="sv-status-pill cyan">
+          <Cpu size={11} /> 16 Shards
+        </span>
+      </div>
+      <div className="sv-term-body">
+        <div className="sv-log-line">
+          <span className="sv-log-status">[200 OK]</span>
+          <span className="sv-log-method">POST</span>
+          <span className="sv-log-path">/v1/telemetry</span>
+          <span className="sv-log-time">12ms</span>
+        </div>
+        <div className="sv-log-line">
+          <span className="sv-log-status queue">[QUEUE]</span>
+          <span className="sv-log-msg">Worker ACK job #8921</span>
+          <span className="sv-log-time">0.8ms</span>
+        </div>
+        <div className="sv-uptime-row">
+          <span>UPTIME 99.99%</span>
+          <div className="sv-uptime-bars">
+            <span className="bar active" /><span className="bar active" /><span className="bar active" /><span className="bar active" /><span className="bar active" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ServiceRow({ service, open, onToggle, index }) {
   const Icon = service.icon
   const articleRef = useRef(null)
   const triggerRef = useRef(null)
@@ -432,7 +545,7 @@ function ServiceRow({ service, open, onToggle }) {
 
   const detailId = `service-detail-${service.number}`
 
-  // 1) Make room: the card grows downward (same height animation as before).
+  // 1) Make room: the card grows downward smoothly
   useEffect(() => {
     const panel = detailRef.current
     if (!panel) return
@@ -468,10 +581,10 @@ function ServiceRow({ service, open, onToggle }) {
     }
   }, [open])
 
-    // 2) Build it: dust pours out of the compact card, and the real card is revealed
-  //    row by row, right behind the dust, as it lands.
+  // 2) Build it: dust particle assembly ("reverse snap" integration/disintegration)
   useLayoutEffect(() => {
     const inner = innerRef.current
+    if (!inner) return
 
     const reveal = (px) => {
       const feather = 32
@@ -489,7 +602,7 @@ function ServiceRow({ service, open, onToggle }) {
       setBuilt(false)
       return undefined
     }
-        const mode = document.documentElement.dataset.motion
+    const mode = document.documentElement.dataset.motion
     const reduced = mode === 'reduced' || (mode !== 'full' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
     if (reduced) {
       inner.style.opacity = '1'
@@ -500,16 +613,17 @@ function ServiceRow({ service, open, onToggle }) {
 
     inner.style.transition = 'none'
     inner.style.opacity = '1'
-    reveal(0) // nothing of the card exists yet
+    reveal(0)
 
     const PAD = 48
     const art = articleRef.current.getBoundingClientRect()
     const trigger = triggerRef.current.getBoundingClientRect()
-    const box = inner.getBoundingClientRect() // natural size even while the card is still growing
+    const box = inner.getBoundingClientRect()
     const rel = (r) => ({ x: r.left - art.left + PAD, y: r.top - art.top + PAD, w: r.width, h: r.height })
     const width = art.width + PAD * 2
     const height = box.bottom - art.top + PAD * 2
     const canvas = canvasRef.current
+    if (!canvas) return
     canvas.style.width = `${width}px`
     canvas.style.height = `${height}px`
 
@@ -534,11 +648,17 @@ function ServiceRow({ service, open, onToggle }) {
       }
     })
   }, [open])
-  
+
+  // Parse deliverables into clean capitalized list items
+  const deliverableItems = service.deliverables
+    ? service.deliverables.split(', ').map((str) => str.charAt(0).toUpperCase() + str.slice(1))
+    : []
+
   return (
     <article
       ref={articleRef}
       className={`service-row stagger-reveal ${open ? 'active' : ''}`}
+      style={{ '--i': index }}
     >
       <button
         ref={triggerRef}
@@ -548,22 +668,30 @@ function ServiceRow({ service, open, onToggle }) {
         aria-controls={detailId}
         onClick={onToggle}
       >
-        <span className="service-number">{service.number}</span>
-
-        <Icon className="service-icon" size={27} strokeWidth={1.5} />
+        <div className="service-trigger-top">
+          <span className="service-number">{service.number}</span>
+          <Icon className="service-icon" size={24} strokeWidth={1.5} />
+        </div>
 
         <span className="service-main">
           <strong>{service.title}</strong>
           <span>{service.text}</span>
         </span>
 
-        <span className="service-tags">
-          {service.tags.map((tag) => (
-            <span key={tag}>{tag}</span>
-          ))}
-        </span>
+        <ServiceVisual number={service.number} />
 
-        <ChevronDown className="row-arrow" size={22} />
+        <div className="service-footer-row">
+          <span className="service-tags">
+            {service.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </span>
+
+          <span className="service-expand-hint">
+            {open ? 'Hide details' : 'Deliverables & timeline'}
+            <ChevronDown className={`row-arrow ${open ? 'is-open' : ''}`} size={16} />
+          </span>
+        </div>
       </button>
 
       <div
@@ -574,20 +702,39 @@ function ServiceRow({ service, open, onToggle }) {
         style={{ height: 0, overflow: 'hidden' }}
       >
         <div ref={innerRef} className={`service-detail-inner ${built ? 'is-built' : ''}`}>
-          <p>
-            <b>Deliverables</b>
-            {service.deliverables}
-          </p>
+          {/* Micro Spec Bar: Timeline & Stack */}
+          <div className="s-spec-bar">
+            <div className="s-spec-cell">
+              <span className="s-spec-label">Timeline</span>
+              <strong className="s-spec-val highlight">{service.timeline}</strong>
+            </div>
+            <div className="s-spec-divider" />
+            <div className="s-spec-cell">
+              <span className="s-spec-label">Technology</span>
+              <span className="s-spec-val">{service.tech}</span>
+            </div>
+          </div>
 
-          <p>
-            <b>Typical timeline</b>
-            {service.timeline}
-          </p>
+          {/* Key Deliverables Structured Checklist */}
+          <div className="s-deliverables-section">
+            <span className="s-spec-label">What We Ship</span>
+            <ul className="s-deliverables-grid">
+              {deliverableItems.map((item) => (
+                <li key={item}>
+                  <Check size={13} className="s-check-icon" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <p>
-            <b>Technology</b>
-            {service.tech}
-          </p>
+          {/* Action CTA inside drawer */}
+          <div className="s-drawer-action">
+            <Link to="/contact" className="s-book-call-btn">
+              <span>Book a free call for {service.title.toLowerCase()}</span>
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
         </div>
       </div>
 
