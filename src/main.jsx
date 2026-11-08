@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Activity, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Check, ChevronDown, Cpu, ExternalLink, FileText, Globe, Layers, LayoutDashboard, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, X, Zap } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -9,8 +9,19 @@ import { assembleParticles } from './components/particleAssemble'
 import './styles.css'
 import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
+import SEOHead from './components/seo/SEOHead'
+import { AuthProvider } from './dashboard/context/AuthContext'
+import { DashboardLayout } from './dashboard/components/DashboardLayout'
+import { DashboardLogin } from './dashboard/pages/DashboardLogin'
+import { DashboardMfa } from './dashboard/pages/DashboardMfa'
+import { DashboardOverview } from './dashboard/pages/DashboardOverview'
+import { DashboardPages } from './dashboard/pages/DashboardPages'
+import { DashboardMetrics } from './dashboard/pages/DashboardMetrics'
+import { DashboardStatus } from './dashboard/pages/DashboardStatus'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -48,16 +59,7 @@ function ScrollToTop() {
   return null
 }
 
-function DocumentMeta() {
-  const { pathname } = useLocation()
-  useEffect(() => {
-    const [title, description] = pageMeta[pathname] || ['Yorven — Built for what’s next.', 'Yorven digital product studio.']
-    document.title = title
-    document.querySelector('meta[name="description"]')?.setAttribute('content', description)
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', `${window.location.origin}${pathname}`)
-  }, [pathname])
-  return null
-}
+// SEO metadata is handled by SEOHead
 
 function useScrollMotion() {
   useEffect(() => {
@@ -264,13 +266,36 @@ function splitWords(element) {
 }
 
 function MotionToggle() {
-  const forceFull = new URLSearchParams(window.location.search).get('motion') === 'full'
-  const [reduced, setReduced] = useState(() => !forceFull && localStorage.getItem('yorven-motion') === 'reduced')
+  const [forceFull, setForceFull] = useState(false)
+  const [reduced, setReduced] = useState(false)
+
   useEffect(() => {
-    document.documentElement.dataset.motion = forceFull ? 'full' : reduced ? 'reduced' : 'full'
-    localStorage.setItem('yorven-motion', reduced ? 'reduced' : 'full')
-  }, [forceFull, reduced])
-  return <button className="motion-toggle" type="button" aria-pressed={forceFull || reduced} onClick={() => setReduced((value) => !value)}>{forceFull ? 'Full motion preview' : reduced ? 'Motion reduced' : 'Reduce motion'}</button>
+    const isForceFull = new URLSearchParams(window.location.search).get('motion') === 'full'
+    const isReduced = !isForceFull && localStorage.getItem('yorven-motion') === 'reduced'
+    setForceFull(isForceFull)
+    setReduced(isReduced)
+    document.documentElement.dataset.motion = isForceFull ? 'full' : isReduced ? 'reduced' : 'full'
+  }, [])
+
+  const handleToggle = () => {
+    setReduced((prev) => {
+      const next = !prev
+      localStorage.setItem('yorven-motion', next ? 'reduced' : 'full')
+      document.documentElement.dataset.motion = forceFull ? 'full' : next ? 'reduced' : 'full'
+      return next
+    })
+  }
+
+  return (
+    <button
+      className="motion-toggle"
+      type="button"
+      aria-pressed={forceFull || reduced}
+      onClick={handleToggle}
+    >
+      {forceFull ? 'Full motion preview' : reduced ? 'Motion reduced' : 'Reduce motion'}
+    </button>
+  )
 }
 
 function MarqueeRow({ items, reverse = false }) {
@@ -343,7 +368,7 @@ function Layout({ children }) {
         <button ref={triggerRef} className="menu-button" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="primary-menu" onClick={() => setOpen((value) => !value)}>{open ? <X /> : <Menu />}</button>
       </nav>
     </header>
-    <main id="main-content">{children}</main>
+    <main id="main-content">{children || <Outlet />}</main>
     <Footer />
   </>
 }
@@ -582,7 +607,7 @@ function ServiceRow({ service, open, onToggle, index }) {
   }, [open])
 
   // 2) Build it: dust particle assembly ("reverse snap" integration/disintegration)
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const inner = innerRef.current
     if (!inner) return
 
@@ -1305,13 +1330,14 @@ function Contact() {
     setSending(true)
 
     try {
-      const success = await dispatchLead({ ...formData })
-      if (!success) {
-        throw new Error('Lead dispatch failed')
+      const result = await dispatchLead({ ...formData })
+      if (result && result.ok) {
+        setSent(true)
+      } else {
+        setError(result?.error || "We couldn't submit your booking. Please email projects@yorven.in directly or try again.")
       }
-      setSent(true)
     } catch (submissionError) {
-      console.error(submissionError)
+      console.error('[Contact] Submission error:', submissionError)
       setError("We couldn't submit your booking. Please email projects@yorven.in directly or try again.")
     } finally {
       setSending(false)
@@ -1569,7 +1595,63 @@ function Contact() {
 }
 
 function Legal({ title, type }) { return <PageShell eyebrow="Yorven Technologies" title={title}><div className="legal-copy"><p className="todo-label">TODO — legal review required</p><h2>{type === 'privacy' ? 'Privacy policy structure' : 'Terms of use structure'}</h2><p>This page is a placeholder for approved legal text. No legal claims or policy terms have been invented here.</p><h3>To be completed</h3><ul><li>Approved {type} text</li><li>Data, jurisdiction and contact details supplied by Yorven</li><li>Final review before launch</li></ul></div></PageShell> }
-function App() {
+function DashboardRouteWrapper() {
+  return (
+    <AuthProvider>
+      <Outlet />
+    </AuthProvider>
+  )
+}
+
+export function AppRoutes() {
+  return (
+    <>
+      <ScrollToTop />
+      <SEOHead />
+      <Routes>
+        {/* Private Studio Dashboard Control Room */}
+        <Route element={<DashboardRouteWrapper />}>
+          <Route path="/dashboard/login" element={<DashboardLogin />} />
+          <Route path="/dashboard/mfa" element={<DashboardMfa />} />
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<Navigate to="/dashboard/overview" replace />} />
+            <Route path="overview" element={<DashboardOverview />} />
+            <Route path="pages" element={<DashboardPages />} />
+            <Route path="metrics" element={<DashboardMetrics />} />
+            <Route path="status" element={<DashboardStatus />} />
+          </Route>
+        </Route>
+
+        {/* Public Marketing Routes with Public Studio Layout */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/services" element={<Navigate to="/#services" replace />} />
+          <Route path="/work" element={<Work />} />
+          <Route path="/work/:slug" element={<CaseStudy />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Legal title="Privacy policy" type="privacy" />} />
+          <Route path="/terms" element={<Legal title="Terms of use" type="terms" />} />
+          <Route
+            path="*"
+            element={
+              <PageShell
+                eyebrow="404"
+                title={<>That page went<br /><span>somewhere else</span></>}
+              >
+                <Link className="button button-lime" to="/">
+                  Back home <ArrowUpRight size={17} />
+                </Link>
+              </PageShell>
+            }
+          />
+        </Route>
+      </Routes>
+    </>
+  )
+}
+
+export function App() {
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -1604,35 +1686,18 @@ function App() {
 
   return (
     <BrowserRouter>
-      <ScrollToTop />
-      <DocumentMeta />
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/services" element={<Navigate to="/#services" replace />} />
-          <Route path="/work" element={<Work />} />
-          <Route path="/work/:slug" element={<CaseStudy />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/privacy" element={<Legal title="Privacy policy" type="privacy" />} />
-          <Route path="/terms" element={<Legal title="Terms of use" type="terms" />} />
-          <Route
-            path="*"
-            element={
-              <PageShell
-                eyebrow="404"
-                title={<>That page went<br /><span>somewhere else</span></>}
-              >
-                <Link className="button button-lime" to="/">
-                  Back home <ArrowUpRight size={17} />
-                </Link>
-              </PageShell>
-            }
-          />
-        </Routes>
-      </Layout>
+      <AppRoutes />
     </BrowserRouter>
   )
 }
 
-createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>)
+if (typeof document !== 'undefined') {
+  const rootElement = document.getElementById('root')
+  if (rootElement) {
+    if (rootElement.hasChildNodes()) {
+      hydrateRoot(rootElement, <React.StrictMode><App /></React.StrictMode>)
+    } else {
+      createRoot(rootElement).render(<React.StrictMode><App /></React.StrictMode>)
+    }
+  }
+}

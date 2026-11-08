@@ -20,4 +20,11 @@ Thumbs.db
 
 # Secrets & Configs
 .env
-*.key   
+.env.*
+!.env.example
+*.key
+scratch/
+
+# Local Development & Tools
+bridge.py
+vite.config.local.js

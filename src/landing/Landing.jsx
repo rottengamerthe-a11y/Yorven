@@ -9,10 +9,11 @@ import './landing.css'
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 function motionReduced() {
-  const mode = document.documentElement.dataset.motion
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false
+  const mode = document.documentElement?.dataset?.motion
   if (mode === 'reduced') return true
   if (mode === 'full') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  return window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false
 }
 
 function useCountUp(target) {

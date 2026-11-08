@@ -1,0 +1,43 @@
+name: Daily SEO Analytics Synchronization
+
+on:
+  schedule:
+    # Triggered daily at 02:00 UTC per Revision 11 Section 22
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allows manual triggering from GitHub Actions UI
+
+concurrency:
+  group: yorven-seo-daily-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Execute Daily SEO Sync Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Background SEO Sync Worker
+        run: node scripts/seo_sync_worker.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+          GSC_CLIENT_EMAIL: ${{ secrets.GSC_CLIENT_EMAIL }}
+          GSC_PRIVATE_KEY: ${{ secrets.GSC_PRIVATE_KEY }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          GA4_CLIENT_EMAIL: ${{ secrets.GA4_CLIENT_EMAIL }}
+          GA4_PRIVATE_KEY: ${{ secrets.GA4_PRIVATE_KEY }}

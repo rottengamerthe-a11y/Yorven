@@ -1,120 +1,173 @@
 /**
- * Lead Dispatcher for Yorven Client Intake
- * Delivers new leads to:
- * 1. Discord Webhook (instant live ping with rich card)
- * 2. Web3Forms (delivers formatted lead email directly to projects@yorven.in)
- * 3. Optional custom endpoint (Vercel Serverless /api/contact)
+ * Client Lead Dispatcher
+ * Manages dual-channel lead delivery:
+ * 1. Web3Forms (browser-side submission to projects@yorven.in inbox via public access key)
+ * 2. Discord Webhook (server-side studio alert via internal /api/contact endpoint)
+ *
+ * In-flight lock and per-submission cache prevent duplicate submissions and duplicate emails on retry.
  */
 
-export async function dispatchLead(formData) {
-  const discordUrl = import.meta.env.VITE_DISCORD_WEBHOOK_URL;
-  const web3FormsKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
-  const customEndpoint = import.meta.env.VITE_CONTACT_ENDPOINT;
+// Public Web3Forms client access key (Web3Forms documentation standard)
+export const WEB3FORMS_ACCESS_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WEB3FORMS_ACCESS_KEY) ||
+  (typeof process !== 'undefined' && process.env?.VITE_WEB3FORMS_ACCESS_KEY) ||
+  '61ced345-d76c-437a-92fd-906464491705'
 
-  const results = {
-    discord: null,
-    email: null,
-    custom: null
-  };
+// In-flight locking guard
+let isSubmitting = false
 
-  // 1. Send to custom endpoint if defined (e.g. /api/contact)
-  if (customEndpoint) {
-    try {
-      const res = await fetch(customEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      results.custom = res.ok;
-    } catch (err) {
-      console.error('Custom contact endpoint failed:', err);
-    }
+// Map of submission fingerprint -> { emailSent: boolean, discordSent: boolean }
+const deliveryStateCache = new Map()
+
+function getFingerprint(formData) {
+  return `${(formData.email || '').trim().toLowerCase()}|${(formData.name || '').trim().toLowerCase()}`
+}
+
+function getStoredState(fingerprint) {
+  if (deliveryStateCache.has(fingerprint)) {
+    return deliveryStateCache.get(fingerprint)
   }
-
-  // 2. Send instant Discord Webhook with rich embed
-  if (discordUrl) {
+  if (typeof window !== 'undefined' && window.sessionStorage) {
     try {
-      const discordPayload = {
-        username: 'Yorven Studio Leads',
-        avatar_url: 'https://yorven.in/yorven-symbol.png',
-        content: '🚨 **New Lead Alert: Call Request Received!**',
-        embeds: [
-          {
-            title: `New Project Booking: ${formData.name}`,
-            description: formData.description || '*No description provided*',
-            color: 556104, // Yorven Deep Green #087c48
-            fields: [
-              { name: '👤 Client Name', value: formData.name, inline: true },
-              { name: '🏢 Venture / Business', value: formData.business || 'Not specified', inline: true },
-              { name: '✉️ Work Email', value: `[${formData.email}](mailto:${formData.email})`, inline: true },
-              { name: '🛠️ Project Focus', value: formData.type || 'Custom Software', inline: true },
-              { name: '💰 Budget Bracket', value: formData.budget || 'Not specified', inline: true },
-              { name: '⏱️ Target Timeline', value: formData.timeline || 'Not specified', inline: true }
-            ],
-            footer: {
-              text: 'Yorven Client Intake • yorven.in'
-            },
-            timestamp: new Date().toISOString()
-          }
-        ]
-      };
-
-      const res = await fetch(discordUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(discordPayload)
-      });
-      results.discord = res.ok;
-    } catch (err) {
-      console.error('Discord webhook dispatch error:', err);
-    }
-  }
-
-  // 3. Send Email to projects@yorven.in via Web3Forms
-  if (web3FormsKey) {
-    try {
-      const web3Payload = {
-        access_key: web3FormsKey,
-        subject: `🔥 New Lead: ${formData.name} (${formData.business || 'New Project'})`,
-        from_name: 'Yorven Client Intake',
-        to: 'projects@yorven.in',
-        replyto: formData.email,
-        name: formData.name,
-        business: formData.business || 'N/A',
-        email: formData.email,
-        project_type: formData.type,
-        budget_range: formData.budget,
-        timeline: formData.timeline,
-        description: formData.description,
-        submitted_at: new Date().toLocaleString()
-      };
-
-      const res = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(web3Payload)
-      });
-      const data = await res.json().catch(() => null);
-      if (data && data.success) {
-        results.email = true;
-      } else {
-        console.warn('Web3Forms dispatch status:', res.status, data?.message || res.statusText);
+      const raw = window.sessionStorage.getItem(`yorven_lead_${fingerprint}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        deliveryStateCache.set(fingerprint, parsed)
+        return parsed
       }
-    } catch (err) {
-      console.warn('Web3Forms dispatch warning:', err?.message || err);
+    } catch {
+      // Ignore sessionStorage errors (e.g. storage disabled)
     }
   }
+  return { emailSent: false, discordSent: false }
+}
 
-  // If running in development without any configured keys, log to console
-  if (!discordUrl && !web3FormsKey && !customEndpoint) {
-    console.warn('[LeadDispatcher] No delivery keys configured in .env. Form submission payload:', formData);
-    // Return true for local testing simulation so development isn't blocked
-    return true;
+function setStoredState(fingerprint, state) {
+  deliveryStateCache.set(fingerprint, state)
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      window.sessionStorage.setItem(`yorven_lead_${fingerprint}`, JSON.stringify(state))
+    } catch {
+      // Ignore quota or security errors
+    }
+  }
+}
+
+/**
+ * Dispatches a lead across Web3Forms and internal /api/contact
+ * Returns: { ok: boolean, emailSent: boolean, discordSent: boolean, error?: string }
+ */
+export async function dispatchLead(formData) {
+  if (isSubmitting) {
+    return { ok: false, error: 'A submission is already in progress. Please wait.' }
   }
 
-  // Return true if at least one delivery channel succeeded
-  return results.discord || results.email || results.custom;
+  isSubmitting = true
+  const fingerprint = getFingerprint(formData)
+  const state = getStoredState(fingerprint)
+
+  try {
+    let emailSuccess = state.emailSent
+    let emailErrorMsg = null
+
+    // 1. Channel A: Direct Browser Web3Forms Submission (Email to projects@yorven.in)
+    if (!emailSuccess && WEB3FORMS_ACCESS_KEY) {
+      try {
+        const fd = new FormData()
+        fd.append('access_key', WEB3FORMS_ACCESS_KEY)
+        fd.append('name', formData.name)
+        fd.append('email', formData.email)
+        fd.append('business', formData.business || 'N/A')
+        fd.append('project_type', formData.type || 'Custom Software')
+        fd.append('budget_range', formData.budget || 'Not specified')
+        fd.append('timeline', formData.timeline || 'Not specified')
+        fd.append('description', formData.description)
+        fd.append('subject', `🔥 New Lead: ${formData.name} (${formData.business || 'New Project'})`)
+        fd.append('from_name', 'Yorven Client Intake')
+
+        const web3Res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          body: fd
+        })
+
+        const web3Data = await web3Res.json().catch(() => null)
+        if (web3Res.ok && web3Data?.success !== false) {
+          emailSuccess = true
+          state.emailSent = true
+        } else {
+          emailErrorMsg = web3Data?.message || `Web3Forms returned status ${web3Res.status}`
+        }
+      } catch (err) {
+        emailErrorMsg = err?.message || 'Network error reaching email intake provider'
+      }
+    }
+
+    // 2. Channel B: Server-Side Studio Alert via Internal Endpoint (/api/contact -> Discord)
+    let discordSuccess = state.discordSent
+    let discordErrorMsg = null
+
+    if (!discordSuccess) {
+      try {
+        const contactRes = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        })
+
+        const contactData = await contactRes.json().catch(() => null)
+        if (contactRes.ok && contactData?.success) {
+          discordSuccess = true
+          state.discordSent = true
+        } else {
+          discordErrorMsg = contactData?.error || `Contact endpoint returned status ${contactRes.status}`
+        }
+      } catch (err) {
+        discordErrorMsg = err?.message || 'Network error reaching internal contact endpoint'
+      }
+    }
+
+    // Update state cache for this submission
+    setStoredState(fingerprint, state)
+
+    // Evaluate Result
+    if (emailSuccess && discordSuccess) {
+      return { ok: true, emailSent: true, discordSent: true }
+    }
+
+    if (!emailSuccess && discordSuccess) {
+      // Discord alerted team, but email confirmation failed
+      return {
+        ok: false,
+        partial: true,
+        emailSent: false,
+        discordSent: true,
+        error: `Your request was alerted to our team, but confirmation email delivery failed (${emailErrorMsg || 'provider unavailable'}). Please email projects@yorven.in directly.`
+      }
+    }
+
+    if (emailSuccess && !discordSuccess) {
+      // Email reached inbox, but internal studio alert failed
+      return {
+        ok: false,
+        partial: true,
+        emailSent: true,
+        discordSent: false,
+        error: `Your booking was emailed, but studio dispatch encountered an issue (${discordErrorMsg || 'channel error'}). Our team will check the inbox.`
+      }
+    }
+
+    // Both failed
+    return {
+      ok: false,
+      partial: false,
+      emailSent: false,
+      discordSent: false,
+      error: 'We could not submit your booking at this time. Please email projects@yorven.in directly.'
+    }
+  } finally {
+    isSubmitting = false
+  }
 }
