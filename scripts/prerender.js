@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { seoRoutes, getRouteMeta } from '../src/data/seoData.js'
+import { insights, validateArticles } from '../src/data/insights.js'
 
 function escapeHtml(str = '') {
   return str
@@ -94,6 +95,9 @@ async function runPrerender() {
   console.log('[Prerender] Loading SSR bundle...')
   const { render } = await import(pathToFileURL(serverEntryPath).href)
   const template = fs.readFileSync(templatePath, 'utf8')
+
+  console.log('[Prerender] Validating article content schema...')
+  validateArticles(insights)
 
   const routes = Object.keys(seoRoutes)
   console.log(`[Prerender] Prerendering ${routes.length} public routes...`)

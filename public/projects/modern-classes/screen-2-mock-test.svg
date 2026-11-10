@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="540" height="960">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#071d1b"/>
+      <stop offset="60%" stop-color="#0a2a27"/>
+      <stop offset="100%" stop-color="#051413"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f3c38"/>
+      <stop offset="100%" stop-color="#092724"/>
+    </linearGradient>
+    <linearGradient id="playerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#041211"/>
+      <stop offset="100%" stop-color="#08221f"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#087c48"/>
+      <stop offset="100%" stop-color="#149e5d"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="540" height="960" fill="url(#bg)"/>
+
+  <!-- Status Bar -->
+  <g fill="#9fbfa8" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">
+    <text x="32" y="30">9:41</text>
+    <text x="508" y="30" text-anchor="end">5G   100%</text>
+  </g>
+
+  <!-- App Header -->
+  <g transform="translate(24, 48)">
+    <rect width="492" height="54" rx="14" fill="#0c322e" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- Logo placeholder -->
+    <circle cx="28" cy="27" r="18" fill="#d7ed83"/>
+    <text x="28" y="32" font-family="system-ui, sans-serif" font-size="14" font-weight="900" fill="#082d2c" text-anchor="middle">MC</text>
+    
+    <text x="56" y="24" font-family="system-ui, sans-serif" font-size="15" font-weight="800" fill="#ffffff">Modern Classes</text>
+    <text x="56" y="42" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">JEE &amp; NEET Portal</text>
+    
+    <rect x="396" y="14" width="84" height="26" rx="6" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)"/>
+    <text x="438" y="31" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#d6e3c9" text-anchor="middle">Batch 2026</text>
+  </g>
+
+  
+  <!-- Test Score Card Header -->
+  <g transform="translate(24, 118)">
+    <rect width="492" height="230" rx="16" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.12)" stroke-width="1" filter="url(#shadow)"/>
+    
+    <text x="24" y="38" font-family="system-ui, sans-serif" font-size="17" font-weight="800" fill="#ffffff">JEE Advanced Mock Test 04</text>
+    <text x="24" y="60" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#8cb8a0">Automated Instant Evaluation · All-Bihar Ranking</text>
+
+    <!-- Score Circle & Rank Banner -->
+    <g transform="translate(24, 82)">
+      <!-- Score Box -->
+      <rect width="138" height="124" rx="12" fill="#071e1c" stroke="rgba(255,255,255,0.08)"/>
+      <text x="69" y="32" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#8cb8a0" text-anchor="middle">TOTAL SCORE</text>
+      <text x="69" y="74" font-family="system-ui, sans-serif" font-size="32" font-weight="900" fill="#ffffff" text-anchor="middle">284</text>
+      <text x="69" y="100" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#68baa0" text-anchor="middle">out of 360</text>
+      
+      <!-- Rank Box -->
+      <rect x="150" y="0" width="138" height="124" rx="12" fill="#071e1c" stroke="rgba(255,255,255,0.08)"/>
+      <text x="219" y="32" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#8cb8a0" text-anchor="middle">INSTITUTE RANK</text>
+      <text x="219" y="74" font-family="system-ui, sans-serif" font-size="32" font-weight="900" fill="#d7ed83" text-anchor="middle">#12</text>
+      <text x="219" y="100" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#68baa0" text-anchor="middle">Top 1.2% Percentile</text>
+
+      <!-- Accuracy Box -->
+      <rect x="300" y="0" width="144" height="124" rx="12" fill="#071e1c" stroke="rgba(255,255,255,0.08)"/>
+      <text x="372" y="32" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#8cb8a0" text-anchor="middle">ACCURACY</text>
+      <text x="372" y="74" font-family="system-ui, sans-serif" font-size="32" font-weight="900" fill="#ffffff" text-anchor="middle">91.4%</text>
+      <text x="372" y="100" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#68baa0" text-anchor="middle">68/74 Attempted</text>
+    </g>
+  </g>
+
+  <!-- Subject-wise Breakdown -->
+  <g transform="translate(24, 368)">
+    <rect width="492" height="498" rx="16" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    
+    <text x="24" y="36" font-family="system-ui, sans-serif" font-size="15" font-weight="800" fill="#ffffff">Subject-Wise Performance Analysis</text>
+
+    <!-- Subject 1: Physics -->
+    <g transform="translate(20, 56)">
+      <rect width="452" height="110" rx="12" fill="rgba(0,0,0,0.25)"/>
+      <text x="20" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Physics</text>
+      <text x="432" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#d7ed83" text-anchor="end">96 / 120 (80%)</text>
+      
+      <!-- Progress Bar -->
+      <rect x="20" y="42" width="412" height="8" rx="4" fill="rgba(255,255,255,0.1)"/>
+      <rect x="20" y="42" width="330" height="8" rx="4" fill="#087c48"/>
+      
+      <text x="20" y="74" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Strong: Optics, Modern Physics</text>
+      <text x="20" y="94" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#e07a5f">Revision recommended: Rotational Mechanics</text>
+    </g>
+
+    <!-- Subject 2: Chemistry -->
+    <g transform="translate(20, 180)">
+      <rect width="452" height="110" rx="12" fill="rgba(0,0,0,0.25)"/>
+      <text x="20" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Chemistry</text>
+      <text x="432" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#d7ed83" text-anchor="end">104 / 120 (86%)</text>
+      
+      <!-- Progress Bar -->
+      <rect x="20" y="42" width="412" height="8" rx="4" fill="rgba(255,255,255,0.1)"/>
+      <rect x="20" y="42" width="355" height="8" rx="4" fill="#087c48"/>
+      
+      <text x="20" y="74" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Strong: Coordination Compounds, Thermodynamics</text>
+      <text x="20" y="94" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#68baa0">Full solution key available in Hindi &amp; English</text>
+    </g>
+
+    <!-- Subject 3: Mathematics -->
+    <g transform="translate(20, 304)">
+      <rect width="452" height="110" rx="12" fill="rgba(0,0,0,0.25)"/>
+      <text x="20" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Mathematics</text>
+      <text x="432" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#d7ed83" text-anchor="end">84 / 120 (70%)</text>
+      
+      <!-- Progress Bar -->
+      <rect x="20" y="42" width="412" height="8" rx="4" fill="rgba(255,255,255,0.1)"/>
+      <rect x="20" y="42" width="288" height="8" rx="4" fill="#087c48"/>
+      
+      <text x="20" y="74" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Strong: Differential Calculus, Vectors</text>
+      <text x="20" y="94" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#e07a5f">Revision recommended: Definite Integration</text>
+    </g>
+
+    <!-- CTAs -->
+    <g transform="translate(20, 430)">
+      <rect width="218" height="44" rx="10" fill="#087c48"/>
+      <text x="109" y="27" font-family="system-ui, sans-serif" font-size="12" font-weight="800" fill="#ffffff" text-anchor="middle">View Solutions Key</text>
+      
+      <rect x="234" y="0" width="218" height="44" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)"/>
+      <text x="343" y="27" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#d6e3c9" text-anchor="middle">Download PDF Report</text>
+    </g>
+  </g>
+
+
+  <!-- Bottom Navigation Bar -->
+  <g transform="translate(0, 888)">
+    <rect width="540" height="72" fill="#061c1a" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- Nav Items -->
+    <g font-family="system-ui, sans-serif" font-size="10" font-weight="700" text-anchor="middle">
+      <g transform="translate(68, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Live</text>
+      </g>
+      <g transform="translate(176, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Tests</text>
+      </g>
+      <g transform="translate(270, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Vault</text>
+      </g>
+      <g transform="translate(364, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Doubts</text>
+      </g>
+      <g transform="translate(460, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Profile</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Home Indicator Bar -->
+  <rect x="210.0" y="946" width="120" height="4" rx="2" fill="rgba(255,255,255,0.3)"/>
+</svg>

@@ -1,7 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowDownRight, ArrowUpRight, Check, ClipboardCheck, FileText, MessageSquare, Plus, Smartphone, Sparkles, Users } from 'lucide-react'
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Sparkles,
+  Users,
+  Tv,
+  FileCheck,
+  BookOpen,
+  HelpCircle
+} from 'lucide-react'
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
+import { modernClasses } from '../data/site'
 import './landing.css'
 
 /* ---------- helpers ---------- */
@@ -128,6 +142,8 @@ export function Hero() {
               src="/projects/racers-vault/porsche-gt3r-grello.jpg"
               alt="Porsche 911 GT3 R Grello in Racers Vault"
               className="h-phone-img"
+              width="576"
+              height="930"
             />
           </div>
         </div>
@@ -136,7 +152,7 @@ export function Hero() {
         <div className="hero-panel panel-aurix">
           <div className="h-bot-id">
             <div className="h-bot-avatar-wrap">
-              <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="h-bot-avatar-img" />
+              <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="h-bot-avatar-img" width="460" height="460" />
             </div>
             <div className="h-bot-title-row">
               <strong>Aurix</strong>
@@ -164,80 +180,245 @@ export function Hero() {
   </section>
 }
 
-function ModernClassesMockup() {
+export function MobileScreenshotCarousel({ screens = [] }) {
+  const [activeSlide, setActiveSlide] = useState(0)
+  const [hasSwiped, setHasSwiped] = useState(false)
+  const carouselRef = useRef(null)
+
+  const handleScroll = (e) => {
+    const el = e.currentTarget
+    if (!hasSwiped && el.scrollLeft > 5) {
+      setHasSwiped(true)
+    }
+
+    const center = el.scrollLeft + el.clientWidth / 2
+    const items = el.children
+    let closestIdx = 0
+    let minDistance = Infinity
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      const itemCenter = item.offsetLeft + item.offsetWidth / 2
+      const dist = Math.abs(center - itemCenter)
+      if (dist < minDistance) {
+        minDistance = dist
+        closestIdx = i
+      }
+    }
+
+    if (closestIdx !== activeSlide) {
+      setActiveSlide(closestIdx)
+    }
+  }
+
+  const handleTouch = () => {
+    if (!hasSwiped) setHasSwiped(true)
+  }
+
+  const scrollToSlide = (idx) => {
+    setHasSwiped(true)
+    setActiveSlide(idx)
+    const el = carouselRef.current
+    if (el && el.children[idx]) {
+      el.children[idx].scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      })
+    }
+  }
+
   return (
-    <div className="modern-app-mockup" aria-hidden="true">
-      <div className="modern-phone-frame">
-        {/* Dynamic Status Bar */}
-        <div className="m-phone-status">
-          <span>9:41</span>
-          <div className="m-speaker-notch" />
-          <div className="m-phone-icons">
-            <span>5G</span>
-            <span>100%</span>
+    <div className="mc-mobile-scroll-view" role="region" aria-label="Swipeable application screenshots">
+      <div
+        ref={carouselRef}
+        className="mc-scroll-carousel"
+        tabIndex={0}
+        onScroll={handleScroll}
+        onTouchStart={handleTouch}
+        onPointerDown={handleTouch}
+      >
+        {screens.map((screen, idx) => (
+          <div key={screen.id || idx} className="mc-scroll-item">
+            <div className="mc-scroll-frame">
+              <img
+                src={screen.src}
+                alt={screen.alt || screen.title}
+                className="mc-scroll-img"
+                width="576"
+                height="1024"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div className="mc-scroll-caption">
+              <strong>{screen.title}</strong>
+              <span>{screen.subtitle}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Swipe Hint: single flex row, nowrap, clamp font-size, aria-hidden, hidden after swipe */}
+      <div
+        className={`mc-carousel-hint ${hasSwiped ? 'is-hidden' : ''}`}
+        aria-hidden="true"
+      >
+        <span className="mc-hint-arrow">←</span>
+        <span className="mc-hint-label">Swipe to explore</span>
+        <span className="mc-hint-arrow">→</span>
+      </div>
+
+      {/* Dot Indicators for current slide */}
+      <div className="mc-carousel-dots" role="tablist" aria-label="Screenshot carousel slides">
+        {screens.map((screen, idx) => (
+          <button
+            key={screen.id || idx}
+            type="button"
+            role="tab"
+            aria-selected={idx === activeSlide}
+            aria-label={`Slide ${idx + 1} of ${screens.length}: ${screen.title || ''}`}
+            className={`mc-carousel-dot ${idx === activeSlide ? 'active' : ''}`}
+            onClick={() => scrollToSlide(idx)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function ModernClassesProofCard() {
+  const [activeScreen, setActiveScreen] = useState(0)
+  const screens = modernClasses.carouselScreens || []
+  const current = screens[activeScreen] || screens[0]
+
+  const nextScreen = () => setActiveScreen((prev) => (prev + 1) % screens.length)
+  const prevScreen = () => setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
+
+  return (
+    <div className="mc-proof-card">
+      <div className="mc-hero-grid">
+        {/* Left Column: Editorial Info & Action Controls */}
+        <div className="mc-hero-editorial">
+          <div className="mc-badge-row">
+            <span className="mc-badge-neutral">
+              <span className="mc-dot" /> Live on Google Play
+            </span>
+            <span className="mc-badge-neutral">
+              Android Application · 2025–2026
+            </span>
+          </div>
+
+          <h3 className="mc-hero-h1 mc-proof-h1">
+            Modern Classes — <span className="mc-lime-accent">a learning app for board &amp; competitive exams</span>
+          </h3>
+
+          <p className="mc-hero-intro">
+            {modernClasses.subtitle}
+          </p>
+
+          <div className="mc-action-row">
+            <div className="mc-action-buttons">
+              <a
+                href={modernClasses.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-lime mc-play-btn"
+              >
+                View on Google Play <ArrowUpRight size={16} />
+              </a>
+              <Link to="/work/modern-classes" className="mc-secondary-link">
+                See how we built it <ArrowUpRight size={14} />
+              </Link>
+            </div>
+
+            <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
+              <img
+                src={modernClasses.qrCode || '/projects/modern-classes-qr.svg'}
+                alt="Scan QR code to open Modern Classes on Google Play"
+                className="mc-qr-img"
+                width="52"
+                height="52"
+                loading="lazy"
+              />
+              <div className="mc-qr-info">
+                <strong>Scan on Android</strong>
+                <small>Instant Google Play link</small>
+              </div>
+            </div>
+          </div>
+
+          {/* 2x2 Feature Chips with Icons */}
+          <div className="mc-feature-grid" aria-label="Key app features">
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><Tv size={16} /> <span>Live Classes</span></div>
+              <p>Streaming &amp; recorded video lectures</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><FileCheck size={16} /> <span>Mock Tests</span></div>
+              <p>Timed single-choice testing engine</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><BookOpen size={16} /> <span>Study Vault</span></div>
+              <p>Bilingual notes &amp; batch schedules</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><HelpCircle size={16} /> <span>Doubts Desk</span></div>
+              <p>Direct faculty resolution &amp; review</p>
+            </div>
           </div>
         </div>
 
-        {/* App Header with Official Circular Logo */}
-        <div className="m-app-header">
-          <div className="m-app-brand">
-            <img src="/modern-classes-logo.jpg" alt="Modern Classes Patna" className="m-app-logo-img" />
-            <div>
-              <strong>Modern Classes</strong>
-              <small>Student Learning Portal</small>
+        {/* Right Column: Desktop Interactive Showcase & Mobile Scroll-Snap Carousel */}
+        <div className="mc-phone-showcase">
+          {/* Desktop Single-Device View (hidden on mobile via CSS) */}
+          <div className="mc-desktop-phone-view">
+            <div
+              className="mc-phone-device"
+              onClick={nextScreen}
+              style={{ cursor: 'pointer' }}
+              title="Click to view next screen"
+            >
+              <div className="mc-phone-viewport">
+                {current && (
+                  <img
+                    src={current.src}
+                    alt={current.alt}
+                    className="mc-phone-screen"
+                    width="576"
+                    height="1024"
+                    loading="lazy"
+                  />
+                )}
+              </div>
             </div>
-          </div>
-          <span className="m-batch-badge">JEE & NEET</span>
-        </div>
 
-        {/* Live Classroom Stream Widget */}
-        <div className="m-live-stream-card">
-          <div className="m-stream-preview">
-            <div className="m-stream-meta-top">
-              <span className="m-live-pill"><span className="m-live-dot" /> LIVE CLASS</span>
-              <span className="m-viewer-count"><Users size={11} /> Lecture Stream</span>
-            </div>
-            <div className="m-stream-overlay">
-              <span className="m-stream-subject">Physics: Vectors & Mechanics</span>
-              <small>Recorded Archive Available</small>
+            <div className="mc-phone-controls">
+              <button
+                type="button"
+                className="mc-nav-arrow"
+                onClick={prevScreen}
+                aria-label="Previous screen"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="mc-phone-caption">
+                <strong>{current ? current.title : ''}</strong>
+                <span>{current ? current.subtitle : ''}</span>
+              </div>
+              <button
+                type="button"
+                className="mc-nav-arrow"
+                onClick={nextScreen}
+                aria-label="Next screen"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Automated Practice Mock Test Evaluation Widget */}
-        <div className="m-mock-rank-card">
-          <div className="m-rank-header">
-            <span className="m-rank-title"><ClipboardCheck size={13} className="text-lime" /> Practice Mock Test</span>
-            <span className="m-rank-badge">Instant Key</span>
-          </div>
-          <div className="m-rank-stats">
-            <div>
-              <small>TEST FORMAT</small>
-              <strong>Timed MCQ</strong>
-            </div>
-            <div>
-              <small>EVALUATION</small>
-              <strong className="text-lime">Automated</strong>
-            </div>
-            <div>
-              <small>SOLUTIONS</small>
-              <strong>Bilingual</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Bilingual Notes & Doubts Bar */}
-        <div className="m-quick-vault">
-          <div className="m-vault-item">
-            <FileText size={13} className="text-mint" />
-            <span>Kinematics (Hindi + English)</span>
-            <span className="m-vault-dl">PDF</span>
-          </div>
-          <div className="m-vault-item">
-            <MessageSquare size={13} className="text-lime" />
-            <span>Student Doubts Desk</span>
-            <span className="m-vault-status">Active</span>
-          </div>
+          {/* Mobile Native Scroll-Snap Carousel (visible only on mobile) */}
+          <MobileScreenshotCarousel screens={screens} />
         </div>
       </div>
     </div>
@@ -264,57 +445,9 @@ export function Proof({ concepts }) {
         <div><p className="eyebrow">{eyebrow}</p><Heading lines={lines} /></div>
         <p className="section-intro">{intro}</p>
       </div>
-      {hasResults && <div className="lp-grid lp-proof-grid" data-count={items.length} style={{ '--cols': Math.min(items.length, 3) }}>
-        {items.map((p, i) => <figure className={`lp-card lp-proof stagger-reveal ${p.summary ? 'lp-case' : ''}`} style={{ '--i': i }} key={`${p.stat}-${i}`}>
-          {p.sample && <span className="lp-sample">Sample · replace in content.js</span>}
-          <div className="lp-proof-main">
-            <div className="lp-proof-stat-block">
-              <span className="lp-live-badge"><span className="live-dot" /> LIVE IN PRODUCTION</span>
-              <div className="lp-stat">{p.stat}</div>
-              <p className="lp-stat-label">{p.statLabel}</p>
-            </div>
-            <ModernClassesMockup />
-          </div>
-          <div className="lp-proof-body">
-            <div className="lp-proof-tag-row">
-              <span className="lp-proof-prod-badge">
-                <Smartphone size={13} /> Official Android App · Google Play
-              </span>
-              <span className="lp-proof-pill">
-                Custom Mobile Learning Portal
-              </span>
-            </div>
-            {p.summary && <p className="lp-proof-summary">{p.summary}</p>}
-            {p.points && (
-              <ul className="lp-points modern-points">
-                <li><span className="pt-dot" /> Live Classes & Video Vault</li>
-                <li><span className="pt-dot" /> Automated Mock Tests</li>
-                <li><span className="pt-dot" /> Bilingual Notes (Hindi + Eng)</li>
-                <li><span className="pt-dot" /> Student Doubts Desk</li>
-              </ul>
-            )}
-            {p.quote && <blockquote>“{p.quote}”</blockquote>}
-            <figcaption className="lp-proof-caption">
-              <div>
-                <b>{p.person || 'Modern Classes Patna'}</b>
-                <span>{p.who}</span>
-              </div>
-              {p.link && (
-                <a
-                  className="button button-lime lp-proof-cta-btn"
-                  href={p.link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {p.link.label} <ArrowUpRight size={16} />
-                </a>
-              )}
-            </figcaption>
-          </div>
-        </figure>)}
-      </div>}
-      {concepts && <div className={`lp-concepts ${hasResults ? 'lp-concepts-after' : ''}`}>
-        {hasResults && <p className="eyebrow">Featured Products & Platforms</p>}
+      {hasResults && <ModernClassesProofCard />}
+      {concepts && <div id="featured-products" className={`lp-concepts ${hasResults ? 'lp-concepts-after' : ''}`}>
+        {hasResults && <p className="eyebrow">Featured Products &amp; Platforms</p>}
         <div className="work-grid">{concepts}</div>
       </div>}
     </div>

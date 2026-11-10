@@ -1,13 +1,17 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Activity, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bot, Check, ChevronDown, Cpu, ExternalLink, FileText, Globe, Layers, LayoutDashboard, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, X, Zap } from 'lucide-react'
+import { Activity, ArrowDown, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Cpu, ExternalLink, FileCheck, FileText, HelpCircle, Layers, LayoutDashboard, List, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, Tv, X, Zap } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { pageMeta, services, work } from './data/site'
+import { pageMeta, services, work, allProjects } from './data/site'
+import { insights, getPublishedInsights, getInsightBySlug, INSIGHT_CATEGORIES, extractTableOfContents, calculateReadingTime } from './data/insights'
+import { InsightCard } from './components/insights/InsightCard'
+import { ArticleProse } from './components/insights/ArticleProse'
+import { TableOfContents } from './components/insights/TableOfContents'
 import { assembleParticles } from './components/particleAssemble'
 import './styles.css'
-import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta } from './landing/Landing'
+import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
 import { AuthProvider } from './dashboard/context/AuthContext'
@@ -27,27 +31,53 @@ gsap.registerPlugin(ScrollTrigger)
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
-  useEffect(() => {
+  const prevPathRef = useRef(pathname)
+
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+
     if (hash) {
       const targetId = hash.slice(1)
-      let attempts = 0
-      const scrollToTarget = () => {
-        const el = document.getElementById(targetId)
-        if (el && window.__lenis) {
-          window.__lenis.resize()
-          window.__lenis.scrollTo(el, { offset: -96, duration: 1.2 })
-          return
+      const isRouteTransition = prevPathRef.current !== pathname
+      prevPathRef.current = pathname
+
+      const applyScroll = (immediate) => {
+        const el = document.getElementById(targetId) || (targetId === 'work' ? document.getElementById('featured-products') : null)
+        if (!el) return false
+
+        const top = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 96)
+        if (immediate) {
+          window.scrollTo(0, top)
+          if (window.__lenis) {
+            window.__lenis.resize()
+            window.__lenis.scrollTo(top, { immediate: true })
+          }
+        } else {
+          if (window.__lenis) {
+            window.__lenis.resize()
+            window.__lenis.scrollTo(el, { offset: -96, duration: 1.2 })
+          } else {
+            window.scrollTo({ top, behavior: 'smooth' })
+          }
         }
-        if (attempts < 20) {
-          attempts++
-          setTimeout(scrollToTarget, 100)
-          return
-        }
-        if (el) el.scrollIntoView({ behavior: 'smooth' })
+        return true
       }
-      const timer = setTimeout(scrollToTarget, 100)
-      return () => clearTimeout(timer)
+
+      // Synchronously position scroll before browser paint on route transitions
+      if (!applyScroll(isRouteTransition)) {
+        let attempts = 0
+        const interval = setInterval(() => {
+          attempts++
+          if (applyScroll(isRouteTransition) || attempts >= 20) {
+            clearInterval(interval)
+          }
+        }, 30)
+        return () => clearInterval(interval)
+      }
     } else {
+      prevPathRef.current = pathname
       if (window.__lenis) {
         window.__lenis.resize()
         window.__lenis.scrollTo(0, { immediate: true })
@@ -320,27 +350,104 @@ function MarqueeRow({ items, reverse = false }) {
   return <div ref={rowRef} className={`marquee-row ${reverse ? 'marquee-row-reverse' : 'marquee-row-forward'}`}>{renderTrack()}{renderTrack(true)}</div>
 }
 
+function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (typeof window !== 'undefined' && window.scrollY > 400) {
+        setVisible(true)
+      } else {
+        setVisible(false)
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  return (
+    <div className={`sticky-bottom-cta ${visible ? 'is-visible' : ''}`} role="region" aria-label="Quick mobile action">
+      <div className="container sticky-cta-inner">
+        {href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="button button-lime sticky-btn">
+            {label} <ArrowUpRight size={16} />
+          </a>
+        ) : (
+          <Link to={to} className="button button-lime sticky-btn">
+            {label} <ArrowUpRight size={16} />
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function Layout({ children }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
   const triggerRef = useRef(null)
   const close = () => { setOpen(false); triggerRef.current?.focus() }
+
   useEffect(() => {
     if (!open) return undefined
-    const onKey = (event) => { if (event.key === 'Escape') close() }
+    const menu = menuRef.current
+    const focusable = menu ? menu.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])') : []
+    const firstEl = focusable[0]
+    const lastEl = focusable[focusable.length - 1]
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        close()
+      } else if (event.key === 'Tab' && focusable.length > 0) {
+        if (event.shiftKey && document.activeElement === firstEl) {
+          event.preventDefault()
+          lastEl?.focus()
+        } else if (!event.shiftKey && document.activeElement === lastEl) {
+          event.preventDefault()
+          firstEl?.focus()
+        }
+      }
+    }
     document.addEventListener('keydown', onKey)
     document.body.classList.add('menu-open')
-    return () => { document.removeEventListener('keydown', onKey); document.body.classList.remove('menu-open') }
+    // Give focus to first item after opening
+    setTimeout(() => firstEl?.focus(), 50)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.classList.remove('menu-open')
+    }
   }, [open])
+
   return <>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <div className="scroll-progress" aria-hidden="true" />
+    <div className={`nav-backdrop ${open ? 'is-open' : ''}`} onClick={close} aria-hidden="true" />
     <header className="nav-wrap">
       <nav className="nav container" aria-label="Primary navigation">
-        <Link className="logo" to="/" onClick={() => setOpen(false)}><img src="/yorven-wordmark.svg" alt="Yorven" /></Link>
-        <div ref={menuRef} id="primary-menu" className={`nav-links ${open ? 'is-open' : ''}`}>
+        <Link className="logo" to="/" onClick={() => setOpen(false)}>
+          <img src="/yorven-wordmark.svg" alt="Yorven" width="360" height="72" />
+        </Link>
+        <div
+          ref={menuRef}
+          id="primary-menu"
+          className={`nav-links ${open ? 'is-open' : ''}`}
+          role={open ? "dialog" : undefined}
+          aria-modal={open ? "true" : undefined}
+          aria-label="Navigation menu"
+        >
+          <div className="nav-drawer-header">
+            <span className="nav-drawer-title">Navigation</span>
+            <button
+              type="button"
+              className="nav-drawer-close"
+              onClick={close}
+              aria-label="Close navigation menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
           <NavLink
-            to="/#services"
+            to="/services"
             onClick={(e) => {
               setOpen(false)
               if (window.location.pathname === '/') {
@@ -362,10 +469,22 @@ function Layout({ children }) {
             Services
           </NavLink>
           <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
+          <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
           <NavLink to="/about" onClick={() => setOpen(false)}>About</NavLink>
-          <NavLink className="nav-contact" to="/contact" onClick={() => setOpen(false)}>Start a project <ArrowUpRight size={15} /></NavLink>
+          <NavLink className="nav-contact" to="/contact" onClick={() => setOpen(false)}>
+            Start a project <ArrowUpRight size={15} />
+          </NavLink>
         </div>
-        <button ref={triggerRef} className="menu-button" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="primary-menu" onClick={() => setOpen((value) => !value)}>{open ? <X /> : <Menu />}</button>
+        <button
+          ref={triggerRef}
+          className="menu-button"
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          aria-controls="primary-menu"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </nav>
     </header>
     <main id="main-content">{children || <Outlet />}</main>
@@ -377,11 +496,11 @@ function Footer() {
   const whatsapp = import.meta.env.VITE_WHATSAPP_URL
   return <footer className="footer">
     <div className="container footer-grid">
-      <div><Link className="logo" to="/"><img src="/yorven-wordmark.svg" alt="Yorven" /></Link><p className="footer-note">Thoughtful digital products<br />for what’s next.</p></div>
+      <div><Link className="logo" to="/"><img src="/yorven-wordmark.svg" alt="Yorven" width="360" height="72" /></Link><p className="footer-note">Thoughtful digital products<br />for what’s next.</p></div>
       <div>
         <p className="eyebrow">Explore</p>
         <Link
-          to="/#services"
+          to="/services"
           onClick={(e) => {
             if (window.location.pathname === '/') {
               const el = document.getElementById('services')
@@ -399,11 +518,13 @@ function Footer() {
             }
           }}
         >
-          Services
+          Services Hub
         </Link>
-        <Link to="/#how">How it works</Link>
-        <Link to="/#faq">FAQ</Link>
+        <Link to="/services/websites">Websites</Link>
+        <Link to="/services/digital-products">Digital Products</Link>
+        <Link to="/services/systems">Systems & Scale</Link>
         <Link to="/work">Work</Link>
+        <Link to="/insights">Insights</Link>
         <Link to="/about">About</Link>
         <Link to="/contact">Contact</Link>
       </div>
@@ -451,6 +572,7 @@ function Home() {
     <HowItWorks />
     <Faq />
     <FinalCta />
+    <StickyBottomCta label="Start a project" to="/contact" />
   </div>
 }
 
@@ -471,7 +593,7 @@ function ServiceVisual({ number }) {
             <Lock size={10} /> platform.yorven.studio
           </span>
           <span className="sv-score-pill">
-            <Sparkles size={10} /> 100 Perf
+            <Sparkles size={10} /> Fast &amp; Accessible
           </span>
         </div>
         <div className="sv-browser-body">
@@ -482,7 +604,7 @@ function ServiceVisual({ number }) {
           <div className="sv-mock-features">
             <span className="sv-mfeat">Fluid Motion</span>
             <span className="sv-mfeat">Design System</span>
-            <span className="sv-mfeat">0.3s LCP</span>
+            <span className="sv-mfeat">Zero Layout Shift</span>
           </div>
         </div>
       </div>
@@ -755,10 +877,16 @@ function ServiceRow({ service, open, onToggle, index }) {
 
           {/* Action CTA inside drawer */}
           <div className="s-drawer-action">
-            <Link to="/contact" className="s-book-call-btn">
+            <Link to={`/contact?type=${encodeURIComponent(service.contactType || service.title)}`} className="s-book-call-btn">
               <span>Book a free call for {service.title.toLowerCase()}</span>
               <ArrowUpRight size={14} />
             </Link>
+            {service.slug && (
+              <Link to={`/services/${service.slug}`} className="s-explore-link">
+                <span>Explore {service.title.toLowerCase()} service</span>
+                <ArrowUpRight size={14} />
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -799,20 +927,24 @@ function WorkVisualContent({ item }) {
         </div>
         <div className="mockup-ledger">
           <div className="ledger-row alert-row">
-            <div className="ledger-cell-main">
-              <strong>Apex Logistics Ltd</strong>
-              <small>INV-2026-041</small>
+            <div className="ledger-cell-top">
+              <strong className="ledger-name">Apex Logistics Ltd</strong>
+              <span className="ledger-id">INV-2026-041</span>
             </div>
-            <div className="ledger-cell-amount">$8,500</div>
-            <div className="ledger-pill overdue">16d Overdue</div>
+            <div className="ledger-cell-bottom">
+              <span className="ledger-amount">$8,500</span>
+              <span className="ledger-pill overdue">16d Overdue</span>
+            </div>
           </div>
           <div className="ledger-row">
-            <div className="ledger-cell-main">
-              <strong>Kinetix Cloud Corp</strong>
-              <small>INV-2026-039</small>
+            <div className="ledger-cell-top">
+              <strong className="ledger-name">Kinetix Cloud Corp</strong>
+              <span className="ledger-id">INV-2026-039</span>
             </div>
-            <div className="ledger-cell-amount">$14,200</div>
-            <div className="ledger-pill pending">Due in 3d</div>
+            <div className="ledger-cell-bottom">
+              <span className="ledger-amount">$14,200</span>
+              <span className="ledger-pill pending">Due in 3d</span>
+            </div>
           </div>
         </div>
       </div>
@@ -825,14 +957,18 @@ function WorkVisualContent({ item }) {
         <div className="racers-phone-frame">
           <div className="phone-screen-wrap">
             <img
-              src="/projects/racers-vault/pagani-huayra-spot.jpg"
-              alt="Pagani Huayra BC"
+              src="/projects/racers-vault/porsche-gt3r-grello.webp"
+              alt="Porsche 911 GT3 R Grello in Racers Vault"
               className="racers-screen-main"
+              width="576"
+              height="930"
             />
             <img
-              src="/projects/racers-vault/porsche-gt3r-grello.jpg"
-              alt="Porsche 911 GT3 R Grello"
+              src="/projects/racers-vault/amg-gt63-coupe.webp"
+              alt="Mercedes-AMG GT 63 Coupe in Racers Vault"
               className="racers-screen-alt"
+              width="576"
+              height="930"
             />
           </div>
         </div>
@@ -843,9 +979,86 @@ function WorkVisualContent({ item }) {
   if (item.slug === 'aurix') {
     return (
       <div className="aurix-mockup" aria-hidden="true">
-        <div className="aurix-embed-frame">
-          <img src="/projects/aurix/aurix-spin-complete.png" alt="Aurix Spin Complete" className="aurix-screen-main" />
-          <img src="/projects/aurix/aurix-champion-signal.png" alt="Aurix Champion Signal" className="aurix-screen-alt" />
+        <div className="aurix-discord-card">
+          <div className="discord-client-top">
+            <div className="discord-bot-meta">
+              <img src="/projects/aurix/aurix-flame-avatar.webp" alt="Aurix Bot" className="discord-avatar" width="32" height="32" />
+              <div className="discord-bot-identity">
+                <span className="discord-bot-name">Aurix</span>
+                <span className="discord-app-tag">APP</span>
+                <span className="discord-time">Today at 1:05 PM</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="discord-embed-wrap">
+            <div className="discord-embed-bar" />
+            <div className="discord-embed-content">
+              <div className="discord-embed-title">
+                <span className="discord-sparkle">✨</span> Server Event: Champion Signal
+              </div>
+              <p className="discord-embed-desc">
+                A combat signal locks onto the server and pays out players who answer before it expires.
+                <br /><code className="discord-cmd">/event action:claim</code>
+              </p>
+
+              <div className="discord-activity-row">
+                <span className="discord-dot-blue">🔹</span>
+                <strong>Activity:</strong> Answer the champion signal with the right opener.
+              </div>
+
+              {/* 3 Columns on desktop, 1 stacked column on mobile with text wrapping */}
+              <div className="discord-cols-grid">
+                <div className="discord-col">
+                  <div className="discord-col-header">
+                    <span className="discord-bullet-orange">◆</span> <strong>Reward</strong>
+                  </div>
+                  <div className="discord-col-val">6,200 aura + 1,250 XP</div>
+                </div>
+
+                <div className="discord-col">
+                  <div className="discord-col-header">
+                    <span className="discord-bullet-sparkle">✦</span> <strong>Unique Bonus</strong>
+                  </div>
+                  <div className="discord-col-val">
+                    <span>rare crate ×1</span>
+                    <span>Adrenaline Tonic ×1</span>
+                  </div>
+                </div>
+
+                <div className="discord-col">
+                  <div className="discord-col-header">
+                    <span className="discord-bullet-blue">❖</span> <strong>Window</strong>
+                  </div>
+                  <div className="discord-col-val discord-window-val">20m 0s</div>
+                </div>
+              </div>
+
+              <div className="discord-btn-row">
+                <span className="discord-pill-btn btn-blurple">⚔️ Claim Loot</span>
+                <span className="discord-pill-btn btn-dark">📜 Raid Log</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (item.slug === 'modern-classes') {
+    return (
+      <div className="modern-card-mockup" aria-hidden="true">
+        <div className="m-card-brand-row">
+          <img src="/modern-classes-logo.webp" alt="Modern Classes Patna" className="m-card-logo" width="48" height="48" />
+          <div className="m-card-brand-text">
+            <strong>Modern Classes Patna</strong>
+            <span>Official Android App · Google Play</span>
+          </div>
+        </div>
+        <div className="m-card-badges-row">
+          <span className="m-card-badge">Live Classes</span>
+          <span className="m-card-badge">Automated Tests</span>
+          <span className="m-card-badge">Bilingual Notes</span>
         </div>
       </div>
     )
@@ -858,17 +1071,17 @@ function WorkCard({ item }) {
   return (
     <Link className="work-card parallax-card" to={'/work/' + item.slug} aria-label={item.title + ' — ' + item.type}>
       <article className="work-card-inner">
-        <div className={'work-visual ' + item.className}>
-          <div className="visual-content">
-            <WorkVisualContent item={item} />
-          </div>
-        </div>
         <div className="work-meta">
           <div>
             <h3>{item.title}</h3>
             <p>{item.type}</p>
           </div>
           <span className="work-arrow"><ArrowUpRight size={18} /></span>
+        </div>
+        <div className={'work-visual ' + item.className}>
+          <div className="visual-content">
+            <WorkVisualContent item={item} />
+          </div>
         </div>
       </article>
     </Link>
@@ -877,7 +1090,7 @@ function WorkCard({ item }) {
 
 function Work() { 
   return (
-    <PageShell eyebrow="Selected work" title={<>Products & platforms<br /><span>engineered to scale</span></>}>
+    <PageShell eyebrow="Selected work" title={<>Featured Products &amp;<br /><span>Platforms</span></>}>
       <p className="page-intro">Real-world applications, mobile software, and high-scale systems engineered by our studio.</p>
       <div className="work-grid work-page-grid">{work.map((item) => <WorkCard key={item.slug} item={item} />)}</div>
     </PageShell>
@@ -919,7 +1132,7 @@ function RacersVaultShowcase({ item }) {
               <span className="phone-island-pill" />
             </div>
             <div className="phone-viewport">
-              <img src={active.src} alt={active.name} className="phone-screen-render" />
+              <img src={active.src} alt={active.name} className="phone-screen-render" width="576" height="930" />
             </div>
             <div className="phone-home-indicator" />
           </div>
@@ -934,7 +1147,7 @@ function RacersVaultShowcase({ item }) {
             <span className="cs-clean-pill tag-xp">{active.xp}</span>
           </div>
 
-          <h3 className="telemetry-headline">{active.name}</h3>
+          <h2 className="telemetry-headline">{active.name}</h2>
           <p className="telemetry-sub">📍 {active.location}</p>
 
           <p className="telemetry-body">{active.caption}</p>
@@ -967,7 +1180,7 @@ function RacersVaultShowcase({ item }) {
               className={'strip-card ' + (idx === activeIdx ? 'active' : '')}
               onClick={() => setActiveIdx(idx)}
             >
-              <img src={s.src} alt={s.name} />
+              <img src={s.src} alt={s.name} width="576" height="930" />
               <div className="strip-card-info">
                 <strong>{s.name}</strong>
                 <small>{s.category} · {s.tier}</small>
@@ -1017,7 +1230,7 @@ function AurixShowcase({ item }) {
           <div className="discord-frame-body">
             <div className="df-message-row">
               <div className="df-bot-avatar">
-                <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="df-bot-avatar-img" />
+                <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="df-bot-avatar-img" width="460" height="460" />
               </div>
               <div className="df-message-content">
                 <div className="df-message-header">
@@ -1026,7 +1239,7 @@ function AurixShowcase({ item }) {
                   <span className="df-timestamp">Today at 1:05 PM</span>
                 </div>
                 <div className="df-embed-image-box">
-                  <img src={active.src} alt={active.name} className="df-embed-img" />
+                  <img src={active.src} alt={active.name} className="df-embed-img" width="647" height="680" />
                 </div>
                 {active.buttons && (
                   <div className="df-action-row" aria-label="Interactive bot action buttons">
@@ -1049,7 +1262,7 @@ function AurixShowcase({ item }) {
             <span className="cs-clean-pill">{active.category}</span>
           </div>
 
-          <h3 className="telemetry-headline">{active.name}</h3>
+          <h2 className="telemetry-headline">{active.name}</h2>
           <p className="telemetry-sub">⚡ Shard Cluster #03 · Dynamic Wealth Engine</p>
 
           <p className="telemetry-body">{active.desc}</p>
@@ -1082,7 +1295,7 @@ function AurixShowcase({ item }) {
               className={'strip-card aurix-card ' + (idx === activeIdx ? 'active' : '')}
               onClick={() => setActiveIdx(idx)}
             >
-              <img src={s.src} alt={s.name} />
+              <img src={s.src} alt={s.name} width="647" height="680" />
               <div className="strip-card-info">
                 <strong>{s.cmd}</strong>
                 <small>{s.category}</small>
@@ -1126,6 +1339,8 @@ function PayperAIShowcase({ item }) {
             src="/projects/payper-ai-live.png"
             alt="ProofPay Live Application (proofpay.ai)"
             className="cs-browser-live-img"
+            width="1440"
+            height="900"
           />
         </div>
       </div>
@@ -1157,27 +1372,324 @@ function PayperAIShowcase({ item }) {
   )
 }
 
+/* --- Modern Classes Bespoke Case Study (Phase 4 Overhaul) --- */
+function ModernClassesCaseStudy({ item, nextItem }) {
+  const navigate = useNavigate()
+  const [activeScreen, setActiveScreen] = useState(0)
+  const screens = item.carouselScreens || []
+  const current = screens[activeScreen] || screens[0]
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = 'teal'
+    return () => {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [])
+
+  const nextScreen = () => setActiveScreen((prev) => (prev + 1) % screens.length)
+  const prevScreen = () => setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
+
+  const handleBack = (e) => {
+    e.preventDefault()
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/#proof')
+    }
+  }
+
+  return (
+    <div className="mc-page-wrapper" data-theme="teal">
+      <article className="mc-editorial-page container">
+      {/* Back Link */}
+      <div className="mc-page-top">
+        <a href="/#proof" onClick={handleBack} className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to Featured Products &amp; Platforms</span>
+        </a>
+      </div>
+
+      {/* Hero: 2-Column Split (Editorial Info on Left, Phone Showcase on Right) */}
+      <header className="mc-hero-grid mc-case-study-hero">
+        <div className="mc-hero-editorial">
+          {/* Small neutral badge */}
+          <div className="mc-badge-row">
+            <span className="mc-badge-neutral">
+              <span className="mc-dot" /> Live on Google Play
+            </span>
+            <span className="mc-badge-neutral">
+              Android Application · 2025–2026
+            </span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="mc-hero-h1">
+            Modern Classes — <span className="mc-lime-accent">a learning app for board &amp; competitive exams</span>
+          </h1>
+
+          {/* Shortened 2-line intro */}
+          <p className="mc-hero-intro">
+            {item.subtitle || item.description}
+          </p>
+
+          {/* Action Row */}
+          <div className="mc-action-row">
+            <div className="mc-action-buttons">
+              <a
+                href={item.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-lime mc-play-btn"
+              >
+                View on Google Play <ArrowUpRight size={16} />
+              </a>
+              <a href="#how-we-built-it" className="mc-secondary-link">
+                See how we built it <ArrowDown size={14} />
+              </a>
+            </div>
+
+            {/* Desktop QR code */}
+            <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
+              <img
+                src={item.qrCode || '/projects/modern-classes-qr.svg'}
+                alt="Scan QR code to open Modern Classes on Google Play"
+                className="mc-qr-img"
+                width="52"
+                height="52"
+                loading="lazy"
+              />
+              <div className="mc-qr-info">
+                <strong>Scan on Android</strong>
+                <small>Instant Google Play link</small>
+              </div>
+            </div>
+          </div>
+
+          {/* 2x2 Feature Chips with Icons */}
+          <div className="mc-feature-grid" aria-label="Key app features">
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><Tv size={16} /> <span>Live Classes</span></div>
+              <p>Streaming &amp; recorded video lectures</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><FileCheck size={16} /> <span>Mock Tests</span></div>
+              <p>Timed single-choice testing engine</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><BookOpen size={16} /> <span>Study Vault</span></div>
+              <p>Bilingual notes &amp; batch schedules</p>
+            </div>
+            <div className="mc-feature-chip">
+              <div className="mc-feature-chip-icon"><HelpCircle size={16} /> <span>Doubts Desk</span></div>
+              <p>Direct faculty resolution &amp; review</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Desktop Interactive Showcase & Mobile Scroll-Snap Carousel */}
+        <div className="mc-phone-showcase">
+          {/* Desktop Single-Device View (hidden on mobile via CSS) */}
+          <div className="mc-desktop-phone-view">
+            <div
+              className="mc-phone-device"
+              onClick={nextScreen}
+              style={{ cursor: 'pointer' }}
+              title="Click to view next screenshot"
+            >
+              <div className="mc-phone-viewport">
+                {current && (
+                  <img
+                    src={current.src}
+                    alt={current.alt || current.title}
+                    className="mc-phone-img"
+                    width="576"
+                    height="1024"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Carousel Controls & Caption */}
+            <div className="mc-phone-controls">
+              <button
+                type="button"
+                className="mc-nav-arrow"
+                onClick={prevScreen}
+                aria-label="Previous screenshot"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="mc-phone-caption">
+                <strong>{current?.title}</strong>
+                <span>{current?.subtitle}</span>
+              </div>
+              <button
+                type="button"
+                className="mc-nav-arrow"
+                onClick={nextScreen}
+                aria-label="Next screenshot"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Native Scroll-Snap Carousel (visible only on mobile) */}
+          <MobileScreenshotCarousel screens={screens} />
+        </div>
+      </header>
+
+      {/* 9. Section 1: Role & Stack (Requirement 9) */}
+      <section id="role-stack" className="mc-section">
+        <div className="mc-section-header">
+          <p className="eyebrow">Studio Delivery</p>
+          <h2 className="mc-section-title">Engineering Role &amp; Production Stack</h2>
+          <p className="mc-section-desc">
+            Yorven architected and shipped the complete mobile application from initial UX design to production deployment on Google Play.
+          </p>
+        </div>
+
+        <div className="mc-role-grid">
+          {(item.roleDetails || []).map((role, idx) => (
+            <div key={idx} className="mc-role-card">
+              <span className="mc-card-index">0{idx + 1}</span>
+              <h3>{role.title}</h3>
+              <p>{role.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mc-stack-box">
+          <span className="mc-stack-heading">Production Technology Stack</span>
+          <div className="mc-stack-pills">
+            {(item.stackItems || []).map((st, idx) => (
+              <div key={idx} className="mc-stack-pill">
+                <strong>{st.name}</strong>
+                <small>{st.category}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 9. Section 2: Problem -> Solution -> Result (Requirement 9) */}
+      <section id="how-we-built-it" className="mc-section">
+        <div className="mc-section-header">
+          <p className="eyebrow">Architecture &amp; Outcomes</p>
+          <h2 className="mc-section-title">Problem &rarr; Solution &rarr; Measurable Result</h2>
+          <p className="mc-section-desc">
+            How structured software replaced chaotic messaging groups with an institutional digital classroom.
+          </p>
+        </div>
+
+        <div className="mc-narrative-grid">
+          <div className="mc-narrative-card">
+            <div className="mc-narrative-tag tag-problem">01 / THE PROBLEM</div>
+            <h3>Fragmented Student Experience</h3>
+            <p>{item.narrative?.problem || item.problem}</p>
+          </div>
+
+          <div className="mc-narrative-card">
+            <div className="mc-narrative-tag tag-solution">02 / THE SOLUTION</div>
+            <h3>Bespoke Flutter Platform</h3>
+            <p>{item.narrative?.solution || item.approach}</p>
+          </div>
+
+          <div className="mc-narrative-card">
+            <div className="mc-narrative-tag tag-result">03 / THE RESULT</div>
+            <h3>Measurable Exam-Day Impact</h3>
+            <p>{item.narrative?.result || 'Students manage weekly tests, doubts, and enrolled batch curriculum seamlessly in one verified Android application.'}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 9. Section 3: App Screenshots Gallery (Requirement 9) */}
+      <section id="screenshots" className="mc-section">
+        <div className="mc-section-header">
+          <p className="eyebrow">Visual Tour</p>
+          <h2 className="mc-section-title">Core Student Workflows</h2>
+          <p className="mc-section-desc">
+            Explore key screens delivered in the production Android build on Google Play.
+          </p>
+        </div>
+
+        <div className="mc-gallery-grid">
+          {screens.map((scr, idx) => (
+            <div key={scr.id} className="mc-gallery-card">
+              <div className="mc-gallery-frame">
+                <img src={scr.src} alt={scr.alt || scr.title} width="576" height="1024" className="mc-gallery-img" />
+              </div>
+              <div className="mc-gallery-meta">
+                <span className="mc-gallery-badge">0{idx + 1} · {scr.title}</span>
+                <p>{scr.subtitle}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 9. Section 4: Next Project & Contact CTA (Requirement 9) */}
+      <footer className="cs-editorial-footer">
+        <div className="cs-next-row">
+          <span className="next-label">Next Project</span>
+          <Link to={'/work/' + nextItem.slug} className="next-project-link">
+            <span>{nextItem.title}</span> <ArrowUpRight size={24} />
+          </Link>
+        </div>
+
+        <div className="cs-contact-banner">
+          <div>
+            <h2>Have an ambitious mobile learning product to build?</h2>
+            <p className="body-copy">
+              We partner with founders and institutions to engineer production software with craft, speed, and client code ownership.
+            </p>
+          </div>
+          <Link to="/contact" className="button button-lime cs-cta-btn">
+            Start a project <ArrowUpRight size={16} />
+          </Link>
+        </div>
+      </footer>
+    </article>
+    <StickyBottomCta label="View on Google Play" href={item.liveUrl} />
+  </div>
+  )
+}
+
 function CaseStudy() { 
   const { slug } = useParams(); 
-  const item = work.find((project) => project.slug === slug); 
+  const item = (allProjects || work).find((project) => project.slug === slug); 
   if (!item) {
     return (
       <PageShell eyebrow="404" title={<>Product not<br /><span>found</span></>}>
-        <Link className="button button-lime" to="/work">Back to work <ArrowUpRight size={17} /></Link>
+        <Link className="button button-lime" to="/#featured-products">Back to products <ArrowUpRight size={17} /></Link>
       </PageShell>
     );
   }
 
+  const navigate = useNavigate();
   const currentIndex = work.findIndex((p) => p.slug === slug);
-  const nextItem = work[(currentIndex + 1) % work.length];
+  const nextItem = currentIndex !== -1 ? work[(currentIndex + 1) % work.length] : work[0];
+
+  const handleBack = (e) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/#featured-products');
+    }
+  };
+
+  if (slug === 'modern-classes') {
+    return <ModernClassesCaseStudy item={item} nextItem={nextItem} />
+  }
 
   return (
     <article className="cs-editorial-page container">
       {/* 1. Calm Editorial Header */}
       <header className="cs-editorial-header">
-        <Link to="/work" className="cs-back-link">
-          <ArrowLeft size={16} /> <span>Back to selected work</span>
-        </Link>
+        <a href="/#featured-products" onClick={handleBack} className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to Featured Products &amp; Platforms</span>
+        </a>
 
         <div className="cs-hero-titles">
           <div className="cs-category-row">
@@ -1202,6 +1714,7 @@ function CaseStudy() {
         {item.slug === 'payper-ai' && <PayperAIShowcase item={item} />}
         {item.slug === 'racers-vault' && <RacersVaultShowcase item={item} />}
         {item.slug === 'aurix' && <AurixShowcase item={item} />}
+        {item.slug === 'modern-classes' && <ModernClassesShowcase item={item} />}
       </section>
 
       {/* 3. Editorial Story: Problem & Engineering */}
@@ -1209,13 +1722,13 @@ function CaseStudy() {
         <div className="cs-story-grid">
           <div className="cs-story-col">
             <span className="cs-story-num">01 / THE CHALLENGE</span>
-            <h3>The Opportunity & Problem</h3>
+            <h2 className="cs-story-h2">The Opportunity & Problem</h2>
             <p>{item.problem}</p>
           </div>
 
           <div className="cs-story-col">
             <span className="cs-story-num">02 / THE ARCHITECTURE</span>
-            <h3>How Yorven Engineered It</h3>
+            <h2 className="cs-story-h2">How Yorven Engineered It</h2>
             <p>{item.approach}</p>
           </div>
         </div>
@@ -1254,6 +1767,532 @@ function CaseStudy() {
   ); 
 }
 
+function ServicesHub() {
+  return (
+    <div className="services-hub-page container">
+      <header className="services-hub-header">
+        <span className="eyebrow">Studio Capabilities</span>
+        <h1 className="services-hub-h1">
+          Thoughtful digital services,<br /><span>engineered with clarity and craft</span>
+        </h1>
+        <p className="page-intro">
+          We partner with founders and product teams to design, engineer, and scale modern software.
+          Our work spans high-performance web platforms, full-stack digital applications, and resilient backend systems.
+        </p>
+      </header>
+
+      {/* 3 Core Discipline Cards */}
+      <section className="services-hub-grid" aria-label="Core Services">
+        {services.map((svc) => {
+          const Icon = svc.icon || Layers
+          return (
+            <article key={svc.slug} className="service-hub-card">
+              <div className="sh-card-top">
+                <span className="sh-number">{svc.number}</span>
+                <span className="sh-icon-box"><Icon size={20} /></span>
+              </div>
+              <h2 className="sh-card-title">{svc.title}</h2>
+              <p className="sh-card-desc">{svc.text}</p>
+
+              <div className="sh-spec-strip">
+                <div>
+                  <small>DELIVERY WINDOW</small>
+                  <strong>{svc.timeline}</strong>
+                </div>
+                <div>
+                  <small>CORE FOUNDATION</small>
+                  <strong>{svc.tech}</strong>
+                </div>
+              </div>
+
+              <div className="sh-deliverables-box">
+                <span className="sh-deliv-heading">Key Deliverables</span>
+                <ul className="sh-deliv-list">
+                  {(svc.deliverableList || []).slice(0, 4).map((item, idx) => (
+                    <li key={idx}>
+                      <Check size={14} className="sh-check" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="sh-card-actions">
+                <Link to={`/services/${svc.slug}`} className="button button-secondary sh-explore-btn">
+                  <span>Explore {svc.title.toLowerCase()}</span>
+                  <ArrowUpRight size={15} />
+                </Link>
+                <Link to={`/contact?type=${encodeURIComponent(svc.contactType || svc.title)}`} className="sh-book-link">
+                  <span>Start a project</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </article>
+          )
+        })}
+      </section>
+
+      {/* Engineering Process: How We Build Together */}
+      <section className="services-process-section" aria-label="How We Build">
+        <div className="sp-header">
+          <span className="eyebrow">Engagement Model</span>
+          <h2 className="sp-title">How we engineer together</h2>
+          <p className="body-copy">
+            Direct access to senior builders from day one. We replace bureaucratic agency handoffs with working software milestones, transparent architecture, and weekly shipping cadence.
+          </p>
+        </div>
+
+        <div className="services-process-grid">
+          <div className="sp-step-card">
+            <span className="sp-step-num">01</span>
+            <h3>Problem Framing &amp; Scope</h3>
+            <p>We clarify business objectives, user journeys, and technical constraints upfront. You get a concrete technical brief, milestone roadmap, and clear scope boundaries.</p>
+          </div>
+          <div className="sp-step-card">
+            <span className="sp-step-num">02</span>
+            <h3>Interactive Prototypes</h3>
+            <p>We test interactions and design systems in real browser viewports, not static mockups. This uncovers edge cases early and validates user flows before full engineering begins.</p>
+          </div>
+          <div className="sp-step-card">
+            <span className="sp-step-num">03</span>
+            <h3>Full-Stack Implementation</h3>
+            <p>Clean front-end component architecture, robust API contracts, and secure database schemas built to production grade with automated tests and weekly preview builds.</p>
+          </div>
+          <div className="sp-step-card">
+            <span className="sp-step-num">04</span>
+            <h3>Hardening &amp; Launch Handover</h3>
+            <p>Rigorous pre-launch auditing, telemetry instrumentation, performance optimization, and clean deployment handover with complete documentation and team onboarding.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Services Hub Bottom CTA */}
+      <section className="services-hub-cta">
+        <div>
+          <h2>Ready to build something meaningful?</h2>
+          <p className="body-copy">
+            Tell us about your product goals, technical parameters, and launch timeline. We will review your brief and follow up within 24 hours.
+          </p>
+        </div>
+        <Link to="/contact" className="button button-lime">
+          Start a project <ArrowUpRight size={16} />
+        </Link>
+      </section>
+    </div>
+  )
+}
+
+function ServiceLandingPage() {
+  const { slug } = useParams()
+  const service = services.find((s) => s.slug === slug)
+
+  if (!service) {
+    return (
+      <PageShell eyebrow="404" title={<>Service not<br /><span>found</span></>}>
+        <p className="body-copy">The requested service discipline could not be found.</p>
+        <Link className="button button-lime" to="/services">
+          View all services <ArrowUpRight size={16} />
+        </Link>
+      </PageShell>
+    )
+  }
+
+  const currentIndex = services.findIndex((s) => s.slug === slug)
+  const nextService = services[(currentIndex + 1) % services.length]
+  const relatedCaseStudies = work.filter((w) => (service.caseStudySlugs || []).includes(w.slug))
+
+  return (
+    <article className="service-page container">
+      {/* 1. Header & Breadcrumb Navigation */}
+      <header className="service-page-header">
+        <Link to="/services" className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to all services</span>
+        </Link>
+
+        <div className="service-hero-titles">
+          <div className="cs-category-row">
+            <span className="cs-meta-pill">Service {service.number}</span>
+            <span className="cs-meta-pill">{service.tags.join(' · ')}</span>
+            <span className="cs-meta-pill">Typical: {service.timeline}</span>
+          </div>
+          <h1 className="service-editorial-h1">{service.heroTitle || service.title}</h1>
+          <p className="service-editorial-sub">{service.heroSub || service.text}</p>
+        </div>
+
+        {/* Inline Specs Strip */}
+        <div className="cs-inline-specs">
+          <span><b>Discipline</b> {service.title}</span>
+          <span><b>Delivery window</b> {service.timeline}</span>
+          <span><b>Core stack</b> {service.tech}</span>
+          <span><b>Engagement</b> Fixed-scope or milestone sprints</span>
+        </div>
+      </header>
+
+      {/* 2. Visual Capability Showcase */}
+      <section className="service-focal-showcase" aria-label={`${service.title} Capability Preview`}>
+        <div className="service-visual-stage">
+          <ServiceVisual number={service.number} />
+        </div>
+      </section>
+
+      {/* 3. Editorial Story: The Problem & Our Engineering Approach */}
+      <section className="service-editorial-story">
+        <div className="cs-story-grid">
+          <div className="cs-story-col">
+            <span className="cs-story-num">01 / THE CHALLENGE</span>
+            <h2 className="cs-story-h2">Why standard execution falls short</h2>
+            <p>{service.challenge}</p>
+          </div>
+          <div className="cs-story-col">
+            <span className="cs-story-num">02 / OUR APPROACH</span>
+            <h2 className="cs-story-h2">How Yorven engineers it</h2>
+            <p>{service.approach}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. What We Ship: Detailed Deliverables Checklist */}
+      <section className="service-deliverables-block" aria-label="Deliverables & Specifications">
+        <span className="eyebrow">Specifications</span>
+        <h2 className="service-section-h2">What we engineer and ship</h2>
+        <div className="service-deliverables-grid">
+          {(service.deliverableList || []).map((item, idx) => (
+            <div key={idx} className="service-deliv-card">
+              <div className="sd-card-header">
+                <Check size={16} className="sd-icon" />
+                <span className="sd-num">0{idx + 1}</span>
+              </div>
+              <p className="sd-text">{item}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 5. Production Evidence: Case Studies */}
+      <section className="service-evidence-block" aria-label="Related Production Case Studies">
+        <span className="eyebrow">Track Record</span>
+        <h2 className="service-section-h2">Applied in production software</h2>
+        {relatedCaseStudies.length > 0 ? (
+          <div className="service-evidence-grid">
+            {relatedCaseStudies.map((cs) => (
+              <Link key={cs.slug} to={`/work/${cs.slug}`} className="service-evidence-card">
+                <div className="sec-top">
+                  <span className="cs-meta-pill">{cs.label}</span>
+                  <span className="cs-meta-pill live">● {cs.badge || 'Live'}</span>
+                </div>
+                <h3 className="sec-title">{cs.title}</h3>
+                <p className="sec-desc">{cs.subtitle || cs.description}</p>
+                <div className="sec-meta-row">
+                  <span><b>Domain:</b> {cs.type}</span>
+                  <span className="sec-cta">View case study <ArrowUpRight size={14} /></span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="service-evidence-fallback">
+            <p className="body-copy">
+              Our websites are engineered to the same exacting standards as our flagship SaaS and mobile products:
+              semantic HTML, responsive layout systems, zero layout shifts, accessible motion, and resilient component structures.
+              Explore our engineering across our published product case studies:
+            </p>
+            <div className="service-evidence-grid">
+              {work.slice(0, 2).map((cs) => (
+                <Link key={cs.slug} to={`/work/${cs.slug}`} className="service-evidence-card">
+                  <div className="sec-top">
+                    <span className="cs-meta-pill">{cs.label}</span>
+                    <span className="cs-meta-pill live">● {cs.badge || 'Live'}</span>
+                  </div>
+                  <h3 className="sec-title">{cs.title}</h3>
+                  <p className="sec-desc">{cs.subtitle || cs.description}</p>
+                  <div className="sec-meta-row">
+                    <span><b>Domain:</b> {cs.type}</span>
+                    <span className="sec-cta">View case study <ArrowUpRight size={14} /></span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 6. Footer Navigation & Contact CTA */}
+      <footer className="service-page-footer">
+        <div className="cs-next-row">
+          <span className="next-label">Next Discipline</span>
+          <Link to={`/services/${nextService.slug}`} className="next-project-link">
+            <span>{nextService.title}</span> <ArrowUpRight size={24} />
+          </Link>
+        </div>
+
+        <div className="cs-contact-banner">
+          <div>
+            <h2>Ready to discuss your {service.title.toLowerCase()} project?</h2>
+            <p className="body-copy">
+              Let's explore your requirements, architecture, and timeline with a senior studio engineer.
+            </p>
+          </div>
+          <Link
+            to={`/contact?type=${encodeURIComponent(service.contactType || service.title)}`}
+            className="button button-green cs-cta-btn"
+          >
+            Start a project <ArrowUpRight size={16} />
+          </Link>
+        </div>
+      </footer>
+    </article>
+  )
+}
+
+function InsightsListing() {
+  const [selectedCategory, setSelectedCategory] = useState('All')
+  const publishedArticles = getPublishedInsights()
+  const categories = ['All', ...INSIGHT_CATEGORIES]
+
+  const filteredArticles = selectedCategory === 'All'
+    ? publishedArticles
+    : publishedArticles.filter(a => a.category === selectedCategory)
+
+  const featuredArticle = publishedArticles.find(a => a.featured)
+  const nonFeaturedArticles = featuredArticle
+    ? filteredArticles.filter(a => a.slug !== featuredArticle.slug)
+    : filteredArticles
+
+  return (
+    <div className="insights-page container">
+      <header className="insights-header">
+        <span className="eyebrow">Studio Perspectives &amp; Writing</span>
+        <h1 className="insights-h1">
+          Perspectives on software craft,<br /><span>systems, and product momentum</span>
+        </h1>
+        <p className="page-intro">
+          Notes, architecture teardowns, and engineering disciplines from our independent product studio.
+        </p>
+      </header>
+
+      {/* Category filter toolbar */}
+      <div className="insights-filters-bar" role="toolbar" aria-label="Filter insights by discipline">
+        <span className="if-label">Topic:</span>
+        <div className="insights-filters" role="tablist">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === cat}
+              className={`insight-filter-btn ${selectedCategory === cat ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Rendering: Empty State vs Article Grid */}
+      {publishedArticles.length === 0 ? (
+        <section className="insights-empty-section" aria-label="Editorial Status">
+          <div className="insights-empty-card">
+            <div className="iec-icon-box">
+              <BookOpen size={24} aria-hidden="true" />
+            </div>
+            <h2 className="iec-title">Publishing in progress</h2>
+            <p className="iec-body">
+              We are curating technical deep-dives on full-stack architecture, design systems, and distributed infrastructure drawn from our active client and internal engineering.
+            </p>
+            <p className="iec-sub">
+              In the meantime, explore our applied engineering across our published product case studies and core studio capabilities.
+            </p>
+            <div className="iec-actions">
+              <Link to="/work" className="button button-secondary">
+                <span>Explore Selected Work</span>
+                <ArrowUpRight size={15} />
+              </Link>
+              <Link to="/services" className="button button-lime">
+                <span>View Studio Capabilities</span>
+                <ArrowUpRight size={15} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Core Writing Pillars */}
+          <div className="insights-pillars-wrap">
+            <span className="eyebrow">Editorial Pillars</span>
+            <div className="insights-pillars-grid">
+              <div className="ip-card">
+                <span className="ip-num">01</span>
+                <h3>Systems Architecture</h3>
+                <p>High-throughput event loops, Redis state synchronization, resilient database schemas, and lease fencing under concurrency.</p>
+              </div>
+              <div className="ip-card">
+                <span className="ip-num">02</span>
+                <h3>Product Engineering</h3>
+                <p>Translating user journeys into fast, accessible, full-stack software with verifiable weekly milestones and zero agency telephone games.</p>
+              </div>
+              <div className="ip-card">
+                <span className="ip-num">03</span>
+                <h3>Front-End Craft</h3>
+                <p>Semantic HTML trees, responsive design token systems, fluid layout scaling, and zero layout shift without bloated JavaScript dependencies.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : filteredArticles.length === 0 ? (
+        <section className="insights-no-results">
+          <p className="body-copy">No published insights found in category "{selectedCategory}".</p>
+          <button type="button" className="button button-secondary" onClick={() => setSelectedCategory('All')}>
+            View all insights
+          </button>
+        </section>
+      ) : (
+        <section className="insights-content-grid" aria-label="Published Insights">
+          {/* Featured Article Presentation */}
+          {selectedCategory === 'All' && featuredArticle && (
+            <div className="insights-featured-row">
+              <InsightCard article={featuredArticle} featured={true} />
+            </div>
+          )}
+
+          {/* Standard Article Grid */}
+          <div className="insights-grid">
+            {nonFeaturedArticles.map((article) => (
+              <InsightCard key={article.slug} article={article} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Bottom CTA Banner */}
+      <section className="insights-footer-cta">
+        <div>
+          <h2>Have something meaningful to build?</h2>
+          <p className="body-copy">
+            We partner with founders and product teams to engineer production software with craft and care.
+          </p>
+        </div>
+        <Link to="/contact" className="button button-lime">
+          Start a project <ArrowUpRight size={16} />
+        </Link>
+      </section>
+    </div>
+  )
+}
+
+function InsightArticle() {
+  const { slug } = useParams()
+  const article = getInsightBySlug(slug)
+
+  if (!article) {
+    return (
+      <PageShell eyebrow="404" title={<>Article not<br /><span>found</span></>}>
+        <p className="body-copy">The requested insight does not exist or has not been published yet.</p>
+        <Link className="button button-lime" to="/insights">
+          Back to all insights <ArrowUpRight size={16} />
+        </Link>
+      </PageShell>
+    )
+  }
+
+  const tocItems = extractTableOfContents(article)
+  const readingTime = calculateReadingTime(article.sections)
+  const relatedServices = services.filter(s => (article.relatedServiceSlugs || []).includes(s.slug))
+  const relatedCaseStudies = work.filter(w => (article.relatedCaseStudySlugs || []).includes(w.slug))
+
+  return (
+    <article className="insight-article-page container">
+      {/* 1. Calm Editorial Header */}
+      <header className="insight-article-header">
+        <Link to="/insights" className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to all insights</span>
+        </Link>
+
+        <div className="insight-hero-titles">
+          <div className="cs-category-row">
+            <span className="cs-meta-pill">{article.category}</span>
+            <span className="cs-meta-pill"><Clock size={11} aria-hidden="true" /> {readingTime}</span>
+            <time dateTime={article.publishedAt} className="cs-meta-pill">{article.publishedAt}</time>
+          </div>
+          <h1 className="insight-article-h1">{article.title}</h1>
+          <p className="insight-article-sub">{article.excerpt}</p>
+        </div>
+
+        {/* Minimal inline metadata line */}
+        <div className="cs-inline-specs">
+          <span><b>Topic</b> {article.category}</span>
+          <span><b>Published</b> {article.publishedAt}</span>
+          {article.author && article.author.name && (
+            <span><b>Author</b> {article.author.name}</span>
+          )}
+          <span><b>Tags</b> {article.tags.join(' · ')}</span>
+        </div>
+      </header>
+
+      {/* 2. Article Layout: TOC Sidebar + Prose Body */}
+      <div className="insight-article-layout">
+        {tocItems.length > 0 && (
+          <aside className="insight-article-sidebar">
+            <TableOfContents items={tocItems} />
+          </aside>
+        )}
+
+        <div className="insight-article-main">
+          <ArticleProse sections={article.sections} />
+        </div>
+      </div>
+
+      {/* 3. Related Capabilities & Evidence (Conditional) */}
+      {(relatedServices.length > 0 || relatedCaseStudies.length > 0) && (
+        <section className="insight-related-section" aria-label="Related Studio Capabilities">
+          <span className="eyebrow">Applied Engineering</span>
+          <h2 className="insight-section-h2">Related capabilities &amp; work</h2>
+          <div className="insight-related-grid">
+            {relatedServices.map(svc => (
+              <Link key={svc.slug} to={`/services/${svc.slug}`} className="service-evidence-card">
+                <div className="sec-top">
+                  <span className="cs-meta-pill">Service {svc.number}</span>
+                </div>
+                <h3 className="sec-title">{svc.title}</h3>
+                <p className="sec-desc">{svc.text}</p>
+                <div className="sec-meta-row">
+                  <span>Explore service</span>
+                  <span className="sec-cta"><ArrowUpRight size={14} /></span>
+                </div>
+              </Link>
+            ))}
+            {relatedCaseStudies.map(cs => (
+              <Link key={cs.slug} to={`/work/${cs.slug}`} className="service-evidence-card">
+                <div className="sec-top">
+                  <span className="cs-meta-pill">{cs.label}</span>
+                  <span className="cs-meta-pill live">● Live</span>
+                </div>
+                <h3 className="sec-title">{cs.title}</h3>
+                <p className="sec-desc">{cs.subtitle || cs.description}</p>
+                <div className="sec-meta-row">
+                  <span>View case study</span>
+                  <span className="sec-cta"><ArrowUpRight size={14} /></span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 4. Footer CTA */}
+      <footer className="insight-article-footer">
+        <div className="cs-contact-banner">
+          <div>
+            <h2>Have something ambitious to build?</h2>
+            <p className="body-copy">We partner with founders and product teams to engineer production software with craft and care.</p>
+          </div>
+          <Link to="/contact" className="button button-green cs-cta-btn">
+            Start a project <ArrowUpRight size={16} />
+          </Link>
+        </div>
+      </footer>
+    </article>
+  )
+}
+
 function About() { return <PageShell eyebrow="A little about us" title={<>Good work starts<br /><span>with good questions</span></>}><div className="about-layout"><div><p className="page-intro">Yorven is an independent digital product studio for businesses with something meaningful to build.</p><p className="body-copy">We believe technology should make things clearer, not more complicated. That means asking the right questions early, sweating the details and building with enough care that the product can keep up with the people using it.</p></div><div className="principles">{[['01','Clarity over theatre'],['02','Craft in every layer'],['03','Progress, together']].map(([n, t]) => <div key={n}><span>{n}</span><h3>{t}</h3><p>Thoughtful decisions, made visible and shared along the way.</p></div>)}</div></div><section className="trust-todo"><p className="eyebrow">Trust</p><h2>Proof points — <em>TODO.</em></h2><p>We’ll add approved client, partner or delivery facts here when provided.</p></section></PageShell> }
 function PageShell({ eyebrow, title, children }) { return <section className="page-shell container"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1>{children}</section> }
 
@@ -1277,6 +2316,24 @@ function Contact() {
   useEffect(() => {
     if (sent) successRef.current?.focus()
   }, [sent])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      const params = new URLSearchParams(window.location.search)
+      const requestedType = params.get('type')
+      if (requestedType) {
+        const validOptions = [
+          'Website / Marketing Platform',
+          'Web Application / SaaS MVP',
+          'Mobile Application (iOS & Android)',
+          'Systems & Custom Infrastructure',
+          'Something else'
+        ]
+        const matched = validOptions.find(o => o.toLowerCase() === requestedType.toLowerCase()) || ''
+        setFormData(prev => ({ ...prev, type: matched }))
+      }
+    }
+  }, [])
 
   function updateField(field, value) {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -1416,22 +2473,30 @@ function Contact() {
                     <p>Tell us your name and business so we know who we're speaking with.</p>
                   </div>
                   <div className="form-grid">
-                    <label>
+                    <label htmlFor="contact-name">
                       Full name *
                       <input
+                        id="contact-name"
                         required
                         name="name"
+                        type="text"
+                        inputMode="text"
                         autoComplete="name"
                         placeholder="e.g. Sarah Jenkins"
                         value={formData.name}
                         onChange={(e) => updateField('name', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                         autoFocus
                       />
                     </label>
-                    <label>
+                    <label htmlFor="contact-business">
                       Business name
                       <input
+                        id="contact-business"
                         name="business"
+                        type="text"
+                        inputMode="text"
                         autoComplete="organization"
                         placeholder="e.g. Acme Labs or stealth venture"
                         value={formData.business}
@@ -1450,26 +2515,33 @@ function Contact() {
                     <p>Help us understand your scope, target budget, and desired launch window.</p>
                   </div>
                   <div className="form-grid">
-                    <label>
+                    <label htmlFor="contact-email">
                       Work email address *
                       <input
+                        id="contact-email"
                         required
                         name="email"
                         type="email"
+                        inputMode="email"
                         autoComplete="email"
                         placeholder="sarah@acmelabs.com"
                         value={formData.email}
                         onChange={(e) => updateField('email', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                         autoFocus
                       />
                     </label>
-                    <label>
+                    <label htmlFor="contact-type">
                       Project type *
                       <select
+                        id="contact-type"
                         required
                         name="type"
                         value={formData.type}
                         onChange={(e) => updateField('type', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                       >
                         <option value="" disabled>Select project type</option>
                         <option>Website / Marketing Platform</option>
@@ -1479,13 +2551,16 @@ function Contact() {
                         <option>Something else</option>
                       </select>
                     </label>
-                    <label>
+                    <label htmlFor="contact-budget">
                       Budget range (USD) *
                       <select
+                        id="contact-budget"
                         required
                         name="budget"
                         value={formData.budget}
                         onChange={(e) => updateField('budget', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                       >
                         <option value="" disabled>Select USD budget range</option>
                         <option>Under $5,000</option>
@@ -1495,13 +2570,16 @@ function Contact() {
                         <option>Prefer to discuss</option>
                       </select>
                     </label>
-                    <label>
+                    <label htmlFor="contact-timeline">
                       Target launch timeline *
                       <select
+                        id="contact-timeline"
                         required
                         name="timeline"
                         value={formData.timeline}
                         onChange={(e) => updateField('timeline', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                       >
                         <option value="" disabled>Select launch window</option>
                         <option>Exploring / Early planning</option>
@@ -1522,15 +2600,18 @@ function Contact() {
                     <p>Share a brief summary of what you want to achieve on our free discovery call.</p>
                   </div>
                   <div className="form-grid">
-                    <label className="full">
+                    <label htmlFor="contact-description" className="full">
                       Project description *
                       <textarea
+                        id="contact-description"
                         required
                         name="description"
                         rows="5"
                         placeholder="Tell us what you're looking to build, any technical preferences, key features, or benchmark products you admire..."
                         value={formData.description}
                         onChange={(e) => updateField('description', e.target.value)}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={error ? 'contact-form-error' : undefined}
                         autoFocus
                       />
                     </label>
@@ -1548,7 +2629,7 @@ function Contact() {
                 </div>
               )}
 
-              {error && <p className="form-error" role="alert" aria-live="polite">{error}</p>}
+              {error && <div id="contact-form-error" className="form-error" role="alert" aria-live="assertive">{error}</div>}
 
               {/* Form Actions: Back & Next / Book Call with generous spacing */}
               <div className="form-actions-row">
@@ -1625,9 +2706,12 @@ export function AppRoutes() {
         {/* Public Marketing Routes with Public Studio Layout */}
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/services" element={<Navigate to="/#services" replace />} />
+          <Route path="/services" element={<ServicesHub />} />
+          <Route path="/services/:slug" element={<ServiceLandingPage />} />
           <Route path="/work" element={<Work />} />
           <Route path="/work/:slug" element={<CaseStudy />} />
+          <Route path="/insights" element={<InsightsListing />} />
+          <Route path="/insights/:slug" element={<InsightArticle />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Legal title="Privacy policy" type="privacy" />} />
@@ -1653,6 +2737,15 @@ export function AppRoutes() {
 
 export function App() {
   useEffect(() => {
+    // On mobile screens or coarse pointers, disable Lenis so native hardware-accelerated touch momentum scrolling runs directly on the compositor
+    const isMobile = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 768px), (pointer: coarse)').matches : false
+    if (isMobile) {
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.add('is-mobile-touch')
+      }
+      return undefined
+    }
+
     const lenis = new Lenis({
       duration: 1.2,
       smoothWheel: true,
@@ -1672,9 +2765,9 @@ export function App() {
 
     if (window.location.hash) {
       setTimeout(() => {
-        const target = document.querySelector(window.location.hash)
-        if (target) lenis.scrollTo(target, { offset: -96, duration: 1.2 })
-      }, 200)
+        const target = document.querySelector(window.location.hash) || (window.location.hash === '#work' ? document.getElementById('featured-products') : null)
+        if (target) lenis.scrollTo(target, { offset: -96, immediate: true })
+      }, 50)
     }
 
     return () => {

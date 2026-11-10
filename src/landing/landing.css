@@ -31,8 +31,13 @@
 .lp-sky-glow { position: absolute; inset: 0; background: radial-gradient(ellipse 70% 34% at 50% 86%, rgba(215, 237, 131, .5), rgba(201, 235, 170, .16) 45%, transparent 72%); animation: lp-breathe 9s ease-in-out infinite; }
 @keyframes lp-breathe { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
 
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  .lp-sky-glow { animation: none !important; }
+  .lp-cloud-tex { animation: none !important; will-change: auto !important; }
+}
+
 /* cloud layers: a flat plane tilted into perspective so it recedes toward the horizon at the bottom */
-.lp-clouds { position: absolute; inset: 0; overflow: hidden; perspective: 460px; perspective-origin: 50% 105%; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); }
+.lp-clouds { position: absolute; inset: 0; overflow: hidden; contain: paint; max-width: 100vw; perspective: 460px; perspective-origin: 50% 105%; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .55) 40%, #000 78%); }
 .lp-cloud-plane { position: absolute; left: -60%; width: 220%; top: -35%; height: 150%; transform-origin: 50% 100%; transform: rotateX(-62deg); transform-style: flat; overflow: hidden; }
 .lp-cloud-tex { position: absolute; inset: 0 auto 0 0; width: 200%; background-repeat: repeat; will-change: transform; animation: lp-drift var(--drift, 140s) linear infinite; }
 @keyframes lp-drift { to { transform: translate3d(-50%, 0, 0); } }
@@ -66,15 +71,15 @@
 .lp-proof-grid { grid-template-columns: repeat(var(--cols, 3), 1fr); }
 .lp-proof { position: relative; margin: 0; padding: 30px 28px; background: #0d3a37; border: 1px solid var(--line-dark); display: flex; flex-direction: column; }
 .lp-stat { color: var(--lime); font-size: clamp(48px, 5.4vw, 80px); font-weight: 700; line-height: .95; letter-spacing: -.06em; }
-.lp-stat-label { min-height: 3em; margin: 12px 0 26px; color: var(--mint); font: 12px/1.5 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.lp-stat-label { min-height: 3em; margin: 12px 0 26px; color: var(--mint); font: 600 12px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase; }
 .lp-proof blockquote { margin: 0 0 26px; color: #eaf1c6; font-size: 18px; line-height: 1.5; letter-spacing: -.02em; }
 .lp-proof figcaption { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line-dark); display: grid; gap: 2px; font-size: 13px; }
 .lp-proof figcaption span { color: #9fbfa8; }
-.lp-sample { align-self: flex-start; margin-bottom: 18px; padding: 5px 8px; border: 1px dashed var(--lime); color: var(--lime); font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.lp-sample { align-self: flex-start; margin-bottom: 18px; padding: 5px 8px; border: 1px dashed var(--lime); color: var(--lime); font: 600 11px/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; }
 .lp-proof-body { display: flex; flex: 1; flex-direction: column; }
 .lp-proof-summary { margin: 0 0 22px; color: #eaf1c6; font-size: clamp(17px, 1.7vw, 21px); line-height: 1.5; letter-spacing: -.025em; }
 .lp-points { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; padding: 0; list-style: none; }
-.lp-points li { padding: 6px 10px; border: 1px solid #47736b; color: var(--mint); font: 11px var(--mono); letter-spacing: .04em; }
+.lp-points li { padding: 6px 10px; border: 1px solid #47736b; color: var(--mint); font: 600 12px/1.3 var(--sans); letter-spacing: .02em; }
 .lp-proof-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; width: fit-content; color: var(--lime); font-weight: 700; border-bottom: 1px solid rgba(215, 237, 131, .5); }
 .lp-proof-link:hover { border-bottom-color: var(--lime); }
 .lp-case {
@@ -102,14 +107,14 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font: 11px var(--mono);
-  font-weight: 800;
+  font: 700 11px/1.2 var(--sans);
   color: var(--lime);
   background: rgba(215, 237, 131, 0.12);
   border: 1px solid rgba(215, 237, 131, 0.25);
   padding: 4px 10px;
   border-radius: 4px;
   margin-bottom: 12px;
+  letter-spacing: 0.05em;
 }
 .live-dot {
   width: 7px;
@@ -119,7 +124,7 @@
   animation: live-pulse 1.4s infinite;
 }
 .lp-case .lp-stat { font-size: clamp(48px, 5.5vw, 76px); font-weight: 800; line-height: 1; }
-.lp-case .lp-stat-label { min-height: 0; margin: 8px 0 0; color: #9fbfa8; font: 12px var(--mono); }
+.lp-case .lp-stat-label { min-height: 0; margin: 8px 0 0; color: #9fbfa8; font: 600 13px/1.3 var(--sans); }
 .lp-case .lp-sample { grid-column: 1 / -1; margin-bottom: 0; }
 
 /* Modern Classes Phone Mockup */
@@ -143,7 +148,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font: 11px var(--mono);
+  font: 600 11px/1.2 var(--sans);
   color: #9fbfa8;
   margin-bottom: 14px;
   padding: 0 4px;
@@ -157,7 +162,7 @@
 .m-phone-icons {
   display: flex;
   gap: 8px;
-  font: 10px var(--mono);
+  font: 600 10px/1.2 var(--sans);
   color: #9fbfa8;
 }
 .m-app-header {
@@ -203,16 +208,17 @@
 }
 .m-app-brand small {
   display: block;
-  font: 10px var(--mono);
+  font: 600 10px/1.2 var(--sans);
   color: #9fbfa8;
 }
 .m-batch-badge {
-  font: 10px var(--mono);
+  font: 700 10.5px/1.2 var(--sans);
   color: var(--lime);
   background: rgba(215, 237, 131, 0.12);
   border: 1px solid rgba(215, 237, 131, 0.25);
   padding: 3px 8px;
   border-radius: 4px;
+  letter-spacing: 0.02em;
 }
 .m-live-stream-card {
   background: linear-gradient(180deg, rgba(8, 45, 44, 0.8) 0%, rgba(5, 28, 26, 0.95) 100%);
@@ -237,8 +243,7 @@
   gap: 6px;
   background: #dc2626;
   color: #fff;
-  font: 10px var(--mono);
-  font-weight: 800;
+  font: 800 10px/1.2 var(--sans);
   padding: 3px 8px;
   border-radius: 4px;
   letter-spacing: 0.04em;
@@ -258,7 +263,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font: 10px var(--mono);
+  font: 600 10.5px/1.2 var(--sans);
   color: #d6e3c9;
 }
 .m-stream-subject {
@@ -269,7 +274,7 @@
   display: block;
 }
 .m-stream-overlay small {
-  font: 11px var(--mono);
+  font: 600 11px/1.2 var(--sans);
   color: var(--mint);
   display: block;
   margin-top: 2px;
@@ -298,8 +303,7 @@
 .m-rank-badge {
   background: var(--lime);
   color: #082d2c;
-  font: 11px var(--mono);
-  font-weight: 800;
+  font: 800 11px/1.2 var(--sans);
   padding: 2px 7px;
   border-radius: 4px;
 }
@@ -314,7 +318,7 @@
 }
 .m-rank-stats small {
   display: block;
-  font: 9px var(--mono);
+  font: 700 9.5px/1.2 var(--sans);
   color: #9fbfa8;
   letter-spacing: 0.05em;
   margin-bottom: 2px;
@@ -344,14 +348,14 @@
   font-size: 11px;
 }
 .m-vault-dl {
-  font: 9px var(--mono);
+  font: 700 9.5px/1.2 var(--sans);
   background: rgba(112, 203, 208, 0.15);
   color: var(--mint);
   padding: 2px 6px;
   border-radius: 3px;
 }
 .m-vault-status {
-  font: 9px var(--mono);
+  font: 700 9.5px/1.2 var(--sans);
   background: rgba(215, 237, 131, 0.15);
   color: var(--lime);
   padding: 2px 6px;
@@ -373,17 +377,16 @@
   background: rgba(8, 124, 72, 0.22);
   border: 1px solid rgba(8, 124, 72, 0.45);
   color: var(--lime);
-  font: 11px var(--mono);
-  font-weight: 700;
+  font: 700 11px/1.2 var(--sans);
   padding: 5px 12px;
   border-radius: 4px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .lp-proof-pill {
-  font: 11px var(--mono);
+  font: 600 11px/1.2 var(--sans);
   color: #9fbfa8;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .modern-points {
@@ -443,28 +446,74 @@
   white-space: nowrap;
 }
 
+#featured-products { scroll-margin-top: 96px; }
 .lp-concepts-after { margin-top: 72px; }
 .lp-dark .work-visual { background: #0d3a37; border: 1px solid var(--line-dark); }
-.lp-dark .work-meta p { color: #9fbfa8; }
+.lp-dark .work-meta p { color: #9fbfa8; font: 500 13px/1.4 var(--sans); text-transform: none; letter-spacing: normal; }
 .lp-dark .work-arrow { color: var(--lime); }
+
+.lp-concepts {
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Modern Classes Featured Hero Card in Proof */
+.mc-proof-card {
+  position: relative;
+  background: #082d2c;
+  border: 1px solid var(--line-dark);
+  border-radius: 4px;
+  padding: 44px 40px;
+  margin-bottom: 56px;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.mc-proof-card .mc-editorial-header {
+  margin-bottom: 32px;
+}
+.mc-proof-card .mc-hero-h1 {
+  font-size: clamp(2rem, 3.4vw, 3.2rem);
+  line-height: 1.05;
+  margin-bottom: 16px;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+@media (max-width: 900px) {
+  .mc-proof-card {
+    padding: 30px 22px;
+    margin-bottom: 40px;
+  }
+  .mc-proof-card .mc-hero-h1 {
+    font-size: clamp(22px, 6.5vw, 30px);
+    line-height: 1.16;
+  }
+}
+@media (max-width: 600px) {
+  .mc-proof-card {
+    padding: 22px 16px;
+  }
+}
 
 /* ---------- 3. problem ---------- */
 .lp-pain-grid { grid-template-columns: repeat(2, 1fr); }
 .lp-pain { padding: 34px 32px 30px; background: #fbf8ef; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 26px; }
 .lp-pain-quote { margin: 0; color: var(--teal); font-size: clamp(22px, 2.3vw, 30px); line-height: 1.18; letter-spacing: -.045em; font-weight: 700; }
 .lp-pain-cost { margin: 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--teal-soft); font-size: 15px; line-height: 1.6; }
-.lp-pain-cost b { display: block; margin-bottom: 6px; color: #b3402a; font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.lp-pain-cost b { display: block; margin-bottom: 6px; color: #b3402a; font: 700 11px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
 
 .lp-calc { display: grid; grid-template-columns: 1.1fr .9fr; gap: 0; margin-top: 28px; background: var(--teal); color: var(--cream); border-radius: 2px 2px 2px 28px; overflow: hidden; }
 .lp-calc-inputs { padding: 40px; }
 .lp-calc-inputs .eyebrow { color: var(--mint); margin-bottom: 30px; }
 .lp-calc label { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; margin-bottom: 12px; color: #d6e3c9; font-size: 14px; line-height: 1.45; }
-.lp-calc output { flex: none; color: var(--lime); font: 13px var(--mono); }
+.lp-calc output { flex: none; color: var(--lime); font: 700 14px/1.2 var(--sans); }
 .lp-range { display: block; width: 100%; margin: 0 0 34px; accent-color: var(--lime); }
 .lp-range:last-child { margin-bottom: 0; }
 .lp-calc-result { display: flex; flex-direction: column; justify-content: center; padding: 40px; background: #0d3a37; border-left: 1px solid var(--line-dark); }
 .lp-calc-number { color: var(--lime); font-size: clamp(40px, 5.2vw, 76px); font-weight: 700; line-height: 1; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
-.lp-calc-label { margin-top: 8px; color: var(--mint); font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.lp-calc-label { margin-top: 8px; color: var(--mint); font: 700 12px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
 .lp-calc-result p { margin: 24px 0 0; color: #9fbfa8; font-size: 14px; line-height: 1.6; }
 
 /* ---------- 4. solution ---------- */
@@ -477,7 +526,7 @@
 .lp-feature h3 { margin-bottom: 10px; font-size: 22px; letter-spacing: -.045em; }
 .lp-feature p { margin-bottom: 0; color: #d6e3c9; font-size: 14px; line-height: 1.6; }
 .lp-benefit { margin-top: auto !important; padding-top: 20px; }
-.lp-benefit b { display: block; margin-bottom: 6px; color: var(--lime); font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.lp-benefit b { display: block; margin-bottom: 6px; color: var(--lime); font: 700 11px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
 .lp-benefit { color: var(--cream) !important; font-size: 15px !important; }
 .lp-services { margin-top: 110px; scroll-margin-top: 96px; }
 .lp-services .eyebrow { margin-bottom: 28px; }
@@ -492,7 +541,7 @@
 .v-ring { fill: none; stroke: #47736b; stroke-width: 1.5; stroke-dasharray: 3 5; }
 .v-dot { fill: var(--mint); }
 .v-core { fill: var(--lime); }
-.v-text { fill: #8fb39c; font: 8.5px var(--mono); letter-spacing: .08em; }
+.v-text { fill: #8fb39c; font: 600 9px/1.2 var(--sans); letter-spacing: .06em; }
 .v-code { fill: var(--lime); font: 700 26px var(--mono); }
 .v-flow { stroke-dasharray: 4 5; }
 .v-lock { stroke-width: 1.6; }
@@ -523,14 +572,14 @@
 /* ---------- 5. how it works ---------- */
 .lp-steps { grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0; list-style: none; counter-reset: step; }
 .lp-step { display: flex; flex-direction: column; padding: 28px 26px; background: #fbf8ef; border: 1px solid var(--line); }
-.lp-step-num { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; color: var(--green); font: 13px var(--mono); }
+.lp-step-num { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; color: var(--green); font: 700 13px/1.2 var(--sans); }
 .lp-step-num::after { content: ''; flex: 1; height: 1px; background: var(--line); transform-origin: left; }
 .lp-step:last-child .lp-step-num::after { display: none; }
 .motion-ready .lp-step.is-visible .lp-step-num::after { animation: lp-line .9s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms + 250ms); }
 @keyframes lp-line { from { transform: scaleX(0); } }
 .lp-step h3 { margin-bottom: 12px; color: var(--teal); font-size: 23px; line-height: 1.1; letter-spacing: -.05em; }
 .lp-step p { color: var(--teal-soft); font-size: 15px; line-height: 1.65; }
-.lp-step-tag { margin-top: auto; align-self: flex-start; padding: 6px 9px; background: rgba(8, 124, 72, .1); color: var(--green); font: 11px var(--mono); letter-spacing: .04em; }
+.lp-step-tag { margin-top: auto; align-self: flex-start; padding: 6px 9px; background: rgba(8, 124, 72, .1); color: var(--green); font: 600 11px/1.2 var(--sans); letter-spacing: .04em; }
 .lp-step p:last-of-type { margin-bottom: 26px; }
 .lp-reassure { display: flex; flex-wrap: wrap; gap: 12px; margin: 36px 0 0; padding: 0; list-style: none; }
 .lp-reassure li { display: inline-flex; align-items: center; gap: 9px; padding: 11px 16px; border: 1px solid var(--line); color: var(--teal); font-size: 14px; font-weight: 700; }
@@ -554,7 +603,7 @@
 /* ---------- 7. final cta ---------- */
 .lp-cta h2 { max-width: none; }
 .lp-cta-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; margin-top: 34px; }
-.lp-cta-note { margin: 18px 0 0; color: var(--teal-soft); font: 12px var(--mono); letter-spacing: .04em; }
+.lp-cta-note { margin: 18px 0 0; color: var(--teal-soft); font: 500 13px/1.4 var(--sans); letter-spacing: .02em; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1000px) {
@@ -572,6 +621,23 @@
   .lp-calc-inputs, .lp-calc-result { padding: 28px 22px; }
   .lp-case { padding: 28px 22px; }
   .lp-pain { padding: 26px 22px; }
+  .lp-hero .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+  }
+  .lp-hero .hero-actions .button {
+    width: 100%;
+    min-height: 48px;
+    text-align: center;
+    justify-content: center;
+  }
+  .lp-hero .hero-actions .text-link {
+    justify-content: center;
+    text-align: center;
+    min-height: 44px;
+  }
 }
 
 /* a single proof card always spans the full width, at every screen size */

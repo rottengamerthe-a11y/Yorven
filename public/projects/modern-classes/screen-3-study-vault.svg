@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="540" height="960">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#071d1b"/>
+      <stop offset="60%" stop-color="#0a2a27"/>
+      <stop offset="100%" stop-color="#051413"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f3c38"/>
+      <stop offset="100%" stop-color="#092724"/>
+    </linearGradient>
+    <linearGradient id="playerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#041211"/>
+      <stop offset="100%" stop-color="#08221f"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#087c48"/>
+      <stop offset="100%" stop-color="#149e5d"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="540" height="960" fill="url(#bg)"/>
+
+  <!-- Status Bar -->
+  <g fill="#9fbfa8" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">
+    <text x="32" y="30">9:41</text>
+    <text x="508" y="30" text-anchor="end">5G   100%</text>
+  </g>
+
+  <!-- App Header -->
+  <g transform="translate(24, 48)">
+    <rect width="492" height="54" rx="14" fill="#0c322e" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- Logo placeholder -->
+    <circle cx="28" cy="27" r="18" fill="#d7ed83"/>
+    <text x="28" y="32" font-family="system-ui, sans-serif" font-size="14" font-weight="900" fill="#082d2c" text-anchor="middle">MC</text>
+    
+    <text x="56" y="24" font-family="system-ui, sans-serif" font-size="15" font-weight="800" fill="#ffffff">Modern Classes</text>
+    <text x="56" y="42" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">JEE &amp; NEET Portal</text>
+    
+    <rect x="396" y="14" width="84" height="26" rx="6" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)"/>
+    <text x="438" y="31" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#d6e3c9" text-anchor="middle">Batch 2026</text>
+  </g>
+
+  
+  <!-- Vault Search & Subject Filter -->
+  <g transform="translate(24, 118)">
+    <rect width="492" height="120" rx="16" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    
+    <!-- Search Bar -->
+    <rect x="20" y="16" width="452" height="42" rx="10" fill="#071e1c" stroke="rgba(255,255,255,0.08)"/>
+    <text x="44" y="42" font-family="system-ui, sans-serif" font-size="13" fill="#688f82">Search formula sheets, notes, question banks...</text>
+    
+    <!-- Subject Filter Pills -->
+    <g transform="translate(20, 72)">
+      <rect width="84" height="30" rx="8" fill="#087c48"/>
+      <text x="42" y="20" font-family="system-ui, sans-serif" font-size="11.5" font-weight="800" fill="#ffffff" text-anchor="middle">All (148)</text>
+      
+      <rect x="92" y="0" width="84" height="30" rx="8" fill="rgba(255,255,255,0.06)"/>
+      <text x="134" y="20" font-family="system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#8cb8a0" text-anchor="middle">Physics</text>
+
+      <rect x="184" y="0" width="94" height="30" rx="8" fill="rgba(255,255,255,0.06)"/>
+      <text x="231" y="20" font-family="system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#8cb8a0" text-anchor="middle">Chemistry</text>
+
+      <rect x="286" y="0" width="76" height="30" rx="8" fill="rgba(255,255,255,0.06)"/>
+      <text x="324" y="20" font-family="system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#8cb8a0" text-anchor="middle">Maths</text>
+
+      <rect x="370" y="0" width="82" height="30" rx="8" fill="rgba(255,255,255,0.06)"/>
+      <text x="411" y="20" font-family="system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#8cb8a0" text-anchor="middle">Biology</text>
+    </g>
+  </g>
+
+  <!-- Document List Section -->
+  <g transform="translate(24, 258)">
+    <rect width="492" height="608" rx="16" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    
+    <text x="24" y="36" font-family="system-ui, sans-serif" font-size="15" font-weight="800" fill="#ffffff">Chapter Formula &amp; Concept Vault</text>
+
+    <!-- Doc 1 -->
+    <g transform="translate(20, 56)">
+      <rect width="452" height="116" rx="12" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.05)"/>
+      <rect x="16" y="16" width="36" height="44" rx="6" fill="#184e46"/>
+      <text x="34" y="43" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#d7ed83" text-anchor="middle">PDF</text>
+      
+      <text x="64" y="32" font-family="system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#ffffff">Ray Optics &amp; Optical Instruments (Class 12)</text>
+      <text x="64" y="52" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Bilingual (Hindi + English) · 28 Pages · 4.2 MB</text>
+      
+      <!-- Badges -->
+      <rect x="64" y="70" width="112" height="24" rx="6" fill="rgba(8,124,72,0.2)"/>
+      <text x="120" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#68baa0" text-anchor="middle">Faculty Verified</text>
+      
+      <rect x="184" y="70" width="100" height="24" rx="6" fill="rgba(255,255,255,0.06)"/>
+      <text x="234" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#d6e3c9" text-anchor="middle">Offline Cached</text>
+
+      <rect x="360" y="68" width="76" height="28" rx="6" fill="#087c48"/>
+      <text x="398" y="86" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Read</text>
+    </g>
+
+    <!-- Doc 2 -->
+    <g transform="translate(20, 188)">
+      <rect width="452" height="116" rx="12" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.05)"/>
+      <rect x="16" y="16" width="36" height="44" rx="6" fill="#184e46"/>
+      <text x="34" y="43" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#d7ed83" text-anchor="middle">PDF</text>
+      
+      <text x="64" y="32" font-family="system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#ffffff">Organic Reaction Mechanisms &amp; Reagents</text>
+      <text x="64" y="52" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Complete Quick Revision Chart · 16 Pages</text>
+      
+      <!-- Badges -->
+      <rect x="64" y="70" width="112" height="24" rx="6" fill="rgba(8,124,72,0.2)"/>
+      <text x="120" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#68baa0" text-anchor="middle">Faculty Verified</text>
+      
+      <rect x="184" y="70" width="100" height="24" rx="6" fill="rgba(255,255,255,0.06)"/>
+      <text x="234" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#d6e3c9" text-anchor="middle">Exam Special</text>
+
+      <rect x="360" y="68" width="76" height="28" rx="6" fill="#087c48"/>
+      <text x="398" y="86" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Read</text>
+    </g>
+
+    <!-- Doc 3 -->
+    <g transform="translate(20, 320)">
+      <rect width="452" height="116" rx="12" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.05)"/>
+      <rect x="16" y="16" width="36" height="44" rx="6" fill="#184e46"/>
+      <text x="34" y="43" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#d7ed83" text-anchor="middle">PDF</text>
+      
+      <text x="64" y="32" font-family="system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#ffffff">Coordinate Geometry &amp; Conic Sections</text>
+      <text x="64" y="52" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Formulas, Short Tricks &amp; PyQ Solutions · 34 Pages</text>
+      
+      <!-- Badges -->
+      <rect x="64" y="70" width="112" height="24" rx="6" fill="rgba(8,124,72,0.2)"/>
+      <text x="120" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#68baa0" text-anchor="middle">Faculty Verified</text>
+
+      <rect x="360" y="68" width="76" height="28" rx="6" fill="#087c48"/>
+      <text x="398" y="86" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Read</text>
+    </g>
+
+    <!-- Doc 4 -->
+    <g transform="translate(20, 452)">
+      <rect width="452" height="116" rx="12" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.05)"/>
+      <rect x="16" y="16" width="36" height="44" rx="6" fill="#184e46"/>
+      <text x="34" y="43" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#d7ed83" text-anchor="middle">PDF</text>
+      
+      <text x="64" y="32" font-family="system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#ffffff">Genetics &amp; Molecular Biology Practice Bank</text>
+      <text x="64" y="52" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#8cb8a0">Bilingual NEET 500 Questions + Explanations</text>
+      
+      <!-- Badges -->
+      <rect x="64" y="70" width="112" height="24" rx="6" fill="rgba(8,124,72,0.2)"/>
+      <text x="120" y="86" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#68baa0" text-anchor="middle">Faculty Verified</text>
+
+      <rect x="360" y="68" width="76" height="28" rx="6" fill="#087c48"/>
+      <text x="398" y="86" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Read</text>
+    </g>
+  </g>
+
+
+  <!-- Bottom Navigation Bar -->
+  <g transform="translate(0, 888)">
+    <rect width="540" height="72" fill="#061c1a" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- Nav Items -->
+    <g font-family="system-ui, sans-serif" font-size="10" font-weight="700" text-anchor="middle">
+      <g transform="translate(68, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Live</text>
+      </g>
+      <g transform="translate(176, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Tests</text>
+      </g>
+      <g transform="translate(270, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Vault</text>
+      </g>
+      <g transform="translate(364, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Doubts</text>
+      </g>
+      <g transform="translate(460, 28)">
+        <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,0.06)"/>
+        <text x="0" y="24" fill="#8cb8a0">Profile</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Home Indicator Bar -->
+  <rect x="210.0" y="946" width="120" height="4" rx="2" fill="rgba(255,255,255,0.3)"/>
+</svg>
