@@ -1,0 +1,42 @@
+name: Daily SEO Crawler Worker
+
+on:
+  schedule:
+    # Triggered daily at 03:00 UTC (08:30 IST), 1 hour after daily SEO sync
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # Allows manual execution from the GitHub Actions UI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yorven-seo-crawler
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    name: Execute Daily SEO Crawler Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker Dependencies
+        run: npm --prefix worker ci
+
+      - name: Run Background SEO Crawler
+        run: npm --prefix worker start
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WORKER_ID: github-actions-crawler-${{ github.run_id }}-${{ github.run_attempt }}
