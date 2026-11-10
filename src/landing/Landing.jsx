@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
 import { modernClasses } from '../data/site'
+import { SafeImage } from '../components/ui/SafeImage'
 import './landing.css'
 
 /* ---------- helpers ---------- */
@@ -138,12 +139,13 @@ export function Hero() {
         <div className="hero-card hero-card-phone">
           <div className="h-phone-notch"><span /></div>
           <div className="h-phone-screen">
-            <img
-              src="/projects/racers-vault/porsche-gt3r-grello.jpg"
+            <SafeImage
+              src="/projects/racers-vault/porsche-gt3r-grello.webp"
               alt="Porsche 911 GT3 R Grello in Racers Vault"
               className="h-phone-img"
               width="576"
               height="930"
+              aspectRatio="576 / 930"
             />
           </div>
         </div>
@@ -152,7 +154,14 @@ export function Hero() {
         <div className="hero-panel panel-aurix">
           <div className="h-bot-id">
             <div className="h-bot-avatar-wrap">
-              <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="h-bot-avatar-img" width="460" height="460" />
+              <SafeImage
+                src="/projects/aurix/aurix-flame-avatar.webp"
+                alt="Aurix"
+                className="h-bot-avatar-img"
+                width="460"
+                height="460"
+                aspectRatio="1 / 1"
+              />
             </div>
             <div className="h-bot-title-row">
               <strong>Aurix</strong>
@@ -241,7 +250,7 @@ export function MobileScreenshotCarousel({ screens = [] }) {
         {screens.map((screen, idx) => (
           <div key={screen.id || idx} className="mc-scroll-item">
             <div className="mc-scroll-frame">
-              <img
+              <SafeImage
                 src={screen.src}
                 alt={screen.alt || screen.title}
                 className="mc-scroll-img"
@@ -249,6 +258,7 @@ export function MobileScreenshotCarousel({ screens = [] }) {
                 height="1024"
                 loading="lazy"
                 decoding="async"
+                aspectRatio="576 / 1024"
               />
             </div>
             <div className="mc-scroll-caption">
@@ -333,13 +343,14 @@ export function ModernClassesProofCard() {
             </div>
 
             <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
-              <img
+              <SafeImage
                 src={modernClasses.qrCode || '/projects/modern-classes-qr.svg'}
                 alt="Scan QR code to open Modern Classes on Google Play"
                 className="mc-qr-img"
                 width="52"
                 height="52"
                 loading="lazy"
+                aspectRatio="1 / 1"
               />
               <div className="mc-qr-info">
                 <strong>Scan on Android</strong>
@@ -381,13 +392,14 @@ export function ModernClassesProofCard() {
             >
               <div className="mc-phone-viewport">
                 {current && (
-                  <img
+                  <SafeImage
                     src={current.src}
                     alt={current.alt}
                     className="mc-phone-screen"
                     width="576"
                     height="1024"
                     loading="lazy"
+                    aspectRatio="576 / 1024"
                   />
                 )}
               </div>

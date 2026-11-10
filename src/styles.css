@@ -3868,4 +3868,86 @@ main,
   padding-bottom: max(96px, calc(80px + env(safe-area-inset-bottom, 0px)));
 }
 
+/* ==========================================================================
+   Image Fallback Tile & Fixed Aspect-Ratio Boxes (Error Resilience)
+   ========================================================================== */
+.img-fallback-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  background: #082120;
+  color: var(--teal-soft, #7ec4bf);
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: inherit;
+  box-sizing: border-box;
+  text-align: center;
+  user-select: none;
+  padding: 18px;
+}
+
+.img-fallback-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.img-fallback-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-soft, #7ec4bf);
+  opacity: 0.8;
+}
+
+.img-fallback-text {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--teal-soft, #7ec4bf);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Ensure fixed aspect ratio containers */
+.df-embed-image-box {
+  aspect-ratio: 647 / 680;
+  width: 100%;
+}
+
+.browser-screenshot-viewport {
+  aspect-ratio: 16 / 10;
+  min-height: 280px;
+}
+
+.mc-scroll-frame .img-fallback-tile,
+.mc-gallery-frame .img-fallback-tile,
+.mc-phone-viewport .img-fallback-tile {
+  background: #092624;
+  color: #d7ed83;
+  border-color: rgba(215, 237, 131, 0.28);
+}
+
+.mc-scroll-frame .img-fallback-text,
+.mc-gallery-frame .img-fallback-text,
+.mc-phone-viewport .img-fallback-text {
+  color: #d7ed83;
+}
+
+.df-embed-image-box .img-fallback-tile {
+  background: #0d101c;
+  color: #a4afff;
+  border-color: rgba(138, 147, 240, 0.25);
+}
+
+.df-embed-image-box .img-fallback-text {
+  color: #a4afff;
+}
+
+
 

@@ -14,6 +14,7 @@ import './styles.css'
 import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
+import { SafeImage } from './components/ui/SafeImage'
 import { AuthProvider } from './dashboard/context/AuthContext'
 import { DashboardLayout } from './dashboard/components/DashboardLayout'
 import { DashboardLogin } from './dashboard/pages/DashboardLogin'
@@ -956,19 +957,21 @@ function WorkVisualContent({ item }) {
       <div className="racers-mockup" aria-hidden="true">
         <div className="racers-phone-frame">
           <div className="phone-screen-wrap">
-            <img
+            <SafeImage
               src="/projects/racers-vault/porsche-gt3r-grello.webp"
               alt="Porsche 911 GT3 R Grello in Racers Vault"
               className="racers-screen-main"
               width="576"
               height="930"
+              aspectRatio="576 / 930"
             />
-            <img
+            <SafeImage
               src="/projects/racers-vault/amg-gt63-coupe.webp"
               alt="Mercedes-AMG GT 63 Coupe in Racers Vault"
               className="racers-screen-alt"
               width="576"
               height="930"
+              aspectRatio="576 / 930"
             />
           </div>
         </div>
@@ -982,7 +985,14 @@ function WorkVisualContent({ item }) {
         <div className="aurix-discord-card">
           <div className="discord-client-top">
             <div className="discord-bot-meta">
-              <img src="/projects/aurix/aurix-flame-avatar.webp" alt="Aurix Bot" className="discord-avatar" width="32" height="32" />
+              <SafeImage
+                src="/projects/aurix/aurix-flame-avatar.webp"
+                alt="Aurix Bot"
+                className="discord-avatar"
+                width="32"
+                height="32"
+                aspectRatio="1 / 1"
+              />
               <div className="discord-bot-identity">
                 <span className="discord-bot-name">Aurix</span>
                 <span className="discord-app-tag">APP</span>
@@ -1049,7 +1059,14 @@ function WorkVisualContent({ item }) {
     return (
       <div className="modern-card-mockup" aria-hidden="true">
         <div className="m-card-brand-row">
-          <img src="/modern-classes-logo.webp" alt="Modern Classes Patna" className="m-card-logo" width="48" height="48" />
+          <SafeImage
+            src="/modern-classes-logo.webp"
+            alt="Modern Classes Patna"
+            className="m-card-logo"
+            width="48"
+            height="48"
+            aspectRatio="1 / 1"
+          />
           <div className="m-card-brand-text">
             <strong>Modern Classes Patna</strong>
             <span>Official Android App · Google Play</span>
@@ -1132,7 +1149,14 @@ function RacersVaultShowcase({ item }) {
               <span className="phone-island-pill" />
             </div>
             <div className="phone-viewport">
-              <img src={active.src} alt={active.name} className="phone-screen-render" width="576" height="930" />
+              <SafeImage
+                src={active.src}
+                alt={active.name}
+                className="phone-screen-render"
+                width="576"
+                height="930"
+                aspectRatio="576 / 930"
+              />
             </div>
             <div className="phone-home-indicator" />
           </div>
@@ -1180,7 +1204,13 @@ function RacersVaultShowcase({ item }) {
               className={'strip-card ' + (idx === activeIdx ? 'active' : '')}
               onClick={() => setActiveIdx(idx)}
             >
-              <img src={s.src} alt={s.name} width="576" height="930" />
+              <SafeImage
+                src={s.src}
+                alt={s.name}
+                width="576"
+                height="930"
+                aspectRatio="576 / 930"
+              />
               <div className="strip-card-info">
                 <strong>{s.name}</strong>
                 <small>{s.category} · {s.tier}</small>
@@ -1230,7 +1260,14 @@ function AurixShowcase({ item }) {
           <div className="discord-frame-body">
             <div className="df-message-row">
               <div className="df-bot-avatar">
-                <img src="/projects/aurix/aurix-flame-avatar.png" alt="Aurix" className="df-bot-avatar-img" width="460" height="460" />
+                <SafeImage
+                  src="/projects/aurix/aurix-flame-avatar.webp"
+                  alt="Aurix"
+                  className="df-bot-avatar-img"
+                  width="460"
+                  height="460"
+                  aspectRatio="1 / 1"
+                />
               </div>
               <div className="df-message-content">
                 <div className="df-message-header">
@@ -1239,7 +1276,14 @@ function AurixShowcase({ item }) {
                   <span className="df-timestamp">Today at 1:05 PM</span>
                 </div>
                 <div className="df-embed-image-box">
-                  <img src={active.src} alt={active.name} className="df-embed-img" width="647" height="680" />
+                  <SafeImage
+                    src={active.src}
+                    alt={active.name}
+                    className="df-embed-img"
+                    width="647"
+                    height="680"
+                    aspectRatio="647 / 680"
+                  />
                 </div>
                 {active.buttons && (
                   <div className="df-action-row" aria-label="Interactive bot action buttons">
@@ -1295,7 +1339,13 @@ function AurixShowcase({ item }) {
               className={'strip-card aurix-card ' + (idx === activeIdx ? 'active' : '')}
               onClick={() => setActiveIdx(idx)}
             >
-              <img src={s.src} alt={s.name} width="647" height="680" />
+              <SafeImage
+                src={s.src}
+                alt={s.name}
+                width="647"
+                height="680"
+                aspectRatio="647 / 680"
+              />
               <div className="strip-card-info">
                 <strong>{s.cmd}</strong>
                 <small>{s.category}</small>
@@ -1335,12 +1385,13 @@ function PayperAIShowcase({ item }) {
 
         {/* Real Live Application Screenshot */}
         <div className="browser-screenshot-viewport">
-          <img
+          <SafeImage
             src="/projects/payper-ai-live.png"
             alt="ProofPay Live Application (proofpay.ai)"
             className="cs-browser-live-img"
             width="1440"
             height="900"
+            aspectRatio="16 / 10"
           />
         </div>
       </div>
@@ -1449,13 +1500,14 @@ function ModernClassesCaseStudy({ item, nextItem }) {
 
             {/* Desktop QR code */}
             <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
-              <img
+              <SafeImage
                 src={item.qrCode || '/projects/modern-classes-qr.svg'}
                 alt="Scan QR code to open Modern Classes on Google Play"
                 className="mc-qr-img"
                 width="52"
                 height="52"
                 loading="lazy"
+                aspectRatio="1 / 1"
               />
               <div className="mc-qr-info">
                 <strong>Scan on Android</strong>
@@ -1497,13 +1549,14 @@ function ModernClassesCaseStudy({ item, nextItem }) {
             >
               <div className="mc-phone-viewport">
                 {current && (
-                  <img
+                  <SafeImage
                     src={current.src}
                     alt={current.alt || current.title}
                     className="mc-phone-img"
                     width="576"
                     height="1024"
                     loading="lazy"
+                    aspectRatio="576 / 1024"
                   />
                 )}
               </div>
@@ -1617,7 +1670,14 @@ function ModernClassesCaseStudy({ item, nextItem }) {
           {screens.map((scr, idx) => (
             <div key={scr.id} className="mc-gallery-card">
               <div className="mc-gallery-frame">
-                <img src={scr.src} alt={scr.alt || scr.title} width="576" height="1024" className="mc-gallery-img" />
+                <SafeImage
+                  src={scr.src}
+                  alt={scr.alt || scr.title}
+                  width="576"
+                  height="1024"
+                  className="mc-gallery-img"
+                  aspectRatio="576 / 1024"
+                />
               </div>
               <div className="mc-gallery-meta">
                 <span className="mc-gallery-badge">0{idx + 1} · {scr.title}</span>
