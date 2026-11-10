@@ -15,6 +15,7 @@ import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreen
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
 import { SafeImage } from './components/ui/SafeImage'
+import { PrivacyPolicy, TermsOfService, CookiePolicy } from './components/legal/LegalPages'
 import { AuthProvider } from './dashboard/context/AuthContext'
 import { DashboardLayout } from './dashboard/components/DashboardLayout'
 import { DashboardLogin } from './dashboard/pages/DashboardLogin'
@@ -529,10 +530,10 @@ function Footer() {
         <Link to="/about">About</Link>
         <Link to="/contact">Contact</Link>
       </div>
-      <div><p className="eyebrow">Get in touch</p><a href="mailto:projects@yorven.in">projects@yorven.in</a><a href="tel:+916289853585">+91 62898 53585</a>{whatsapp && <a href={whatsapp}>WhatsApp</a>}</div>
+      <div><p className="eyebrow">Get in touch</p><a href="mailto:projects@yorven.in">projects@yorven.in</a>{whatsapp && <a href={whatsapp}>WhatsApp</a>}</div>
       <div><p className="eyebrow">Elsewhere</p><a href="https://x.com/YORVENin?s=20" target="_blank" rel="noreferrer">X / Twitter</a><a href="https://www.instagram.com/yorven.in/" target="_blank" rel="noreferrer">Instagram</a><MotionToggle /></div>
     </div>
-    <div className="container footer-bottom"><span>© {new Date().getFullYear()} Yorven Technologies</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></div></div>
+    <div className="container footer-bottom"><span>© {new Date().getFullYear()} Yorven</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/cookies">Cookies</Link></div></div>
   </footer>
 }
 
@@ -2469,8 +2470,6 @@ function Contact() {
           <div className="contact-detail">
             <p className="eyebrow">Email</p>
             <a href="mailto:projects@yorven.in">projects@yorven.in <ArrowUpRight size={15} /></a>
-            <p className="eyebrow">Phone</p>
-            <a href="tel:+916289853585">+91 62898 53585 <ArrowUpRight size={15} /></a>
           </div>
         </div>
 
@@ -2722,6 +2721,12 @@ function Contact() {
                 )}
               </div>
 
+              {step === 3 && (
+                <p className="form-privacy-notice">
+                  Information provided is used solely to evaluate your project and respond to your enquiry. Deliveries are routed via Web3Forms and relevant project alerts are forwarded to our private studio Discord channel. See our <Link to="/privacy">Privacy Policy</Link> for details.
+                </p>
+              )}
+
               <p className="form-footnote">
                 {step === 3
                   ? 'No pressure, no hard sell. Just a candid technical conversation and written roadmap.'
@@ -2735,7 +2740,6 @@ function Contact() {
   )
 }
 
-function Legal({ title, type }) { return <PageShell eyebrow="Yorven Technologies" title={title}><div className="legal-copy"><p className="todo-label">TODO — legal review required</p><h2>{type === 'privacy' ? 'Privacy policy structure' : 'Terms of use structure'}</h2><p>This page is a placeholder for approved legal text. No legal claims or policy terms have been invented here.</p><h3>To be completed</h3><ul><li>Approved {type} text</li><li>Data, jurisdiction and contact details supplied by Yorven</li><li>Final review before launch</li></ul></div></PageShell> }
 function DashboardRouteWrapper() {
   return (
     <AuthProvider>
@@ -2774,8 +2778,9 @@ export function AppRoutes() {
           <Route path="/insights/:slug" element={<InsightArticle />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/privacy" element={<Legal title="Privacy policy" type="privacy" />} />
-          <Route path="/terms" element={<Legal title="Terms of use" type="terms" />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/cookies" element={<CookiePolicy />} />
           <Route
             path="*"
             element={

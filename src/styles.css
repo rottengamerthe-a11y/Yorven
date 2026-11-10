@@ -1078,7 +1078,41 @@ h2 { margin-bottom: 26px; font-size: clamp(40px, 5vw, 72px); line-height: .98; l
 .success-summary-box small { display: block; font: 600 10.5px/1.2 var(--sans); color: var(--teal-soft); letter-spacing: 0.04em; margin-bottom: 4px; }
 .success-summary-box strong { font-size: 13px; font-weight: 800; color: var(--teal); }
 
-.todo-label { display: inline-block; padding: 6px 9px; background: #ffe5df; color: #7d241c; font: 700 12px/1.2 var(--sans); }.legal-copy { max-width: 70ch; color: var(--teal-soft); font-size: 16px; line-height: 1.75; }.legal-copy h2, .legal-copy h3 { color: var(--teal); }.legal-copy li { margin: 10px 0; }.honeypot { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.legal-header { margin-bottom: 48px; }
+.legal-back-link { display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--sans); color: var(--teal-soft); margin-bottom: 24px; text-decoration: none; transition: color var(--motion-fast) var(--ease-out); }
+.legal-back-link:hover { color: var(--green); }
+.legal-title { font-family: var(--serif); font-size: clamp(34px, 4.5vw, 52px); line-height: 1.1; color: var(--teal); margin: 8px 0 16px; }
+.legal-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; font-family: var(--mono); font-size: 12px; }
+.legal-badge { display: inline-block; padding: 4px 10px; background: var(--cream-deep); color: var(--teal); border-radius: var(--radius); font-weight: 500; }
+.legal-domain { color: var(--teal-soft); }
+.legal-intro-box { display: flex; gap: 16px; padding: 22px 24px; background: var(--cream-deep); border-left: 3px solid var(--green); border-radius: var(--radius); margin-bottom: 40px; color: var(--teal); }
+.legal-box-icon { flex-shrink: 0; color: var(--green); margin-top: 2px; }
+.legal-intro-box strong { display: block; font: 700 15px/1.3 var(--sans); margin-bottom: 6px; }
+.legal-intro-box p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--teal-soft); }
+.legal-copy { max-width: 76ch; color: var(--teal-soft); font-size: 16px; line-height: 1.75; }
+.legal-copy h2 { font-family: var(--serif); font-size: 26px; line-height: 1.25; color: var(--teal); margin: 44px 0 16px; padding-top: 24px; border-top: 1px solid var(--line); }
+.legal-copy h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.legal-copy h3 { font-family: var(--sans); font-size: 17px; font-weight: 700; color: var(--teal); margin: 28px 0 12px; }
+.legal-copy p { margin: 0 0 18px; }
+.legal-copy ul, .legal-copy ol { margin: 0 0 24px; padding-left: 24px; }
+.legal-copy li { margin: 8px 0; }
+.legal-copy a { color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
+.legal-copy a:hover { color: var(--teal); }
+.legal-table-wrap { overflow-x: auto; margin: 24px 0 32px; border: 1px solid var(--line); border-radius: var(--radius); }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+.legal-table th { background: var(--cream-deep); color: var(--teal); font-family: var(--sans); font-weight: 700; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.legal-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--teal-soft); }
+.legal-table tr:last-child td { border-bottom: none; }
+.legal-table code { font-size: 12px; white-space: nowrap; }
+.inline-check { color: var(--green); vertical-align: text-bottom; margin-right: 4px; }
+.legal-contact-card { background: var(--cream-deep); padding: 20px 24px; border-radius: var(--radius); margin-top: 20px; font-size: 14px; }
+.legal-contact-card p { margin: 4px 0; }
+.legal-numbered-list { padding-left: 20px; }
+.legal-numbered-list li { margin: 14px 0; }
+.form-privacy-notice { margin: 18px 0 0; color: var(--teal-soft); font-size: 13px; line-height: 1.5; }
+.form-privacy-notice a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; }
+.form-privacy-notice a:hover { color: var(--green); }
+.honeypot { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 .footer { padding: 80px 0 26px; background: var(--teal); color: var(--cream); }
 .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 40px; }

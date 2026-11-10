@@ -16,37 +16,73 @@ export const WEB3FORMS_ACCESS_KEY =
 // In-flight locking guard
 let isSubmitting = false
 
-// Map of submission fingerprint -> { emailSent: boolean, discordSent: boolean }
+// Map of submission opaque key -> { emailSent: boolean, discordSent: boolean }
 const deliveryStateCache = new Map()
 
-function getFingerprint(formData) {
-  return `${(formData.email || '').trim().toLowerCase()}|${(formData.name || '').trim().toLowerCase()}`
+/**
+ * Computes an opaque, non-identifying identifier for sessionStorage deduplication.
+ * 1. Preferred: Deterministic SHA-256 via Web Crypto (sub_${hex32})
+ * 2. Fallback: crypto.randomUUID() if supported (sub_${uuid})
+ * 3. Otherwise: Returns null to safely skip client-side deduplication.
+ * Prevents writing personal names and email addresses to client storage keys.
+ */
+async function getOpaqueFingerprint(formData) {
+  const raw = `${(formData.email || '').trim().toLowerCase()}|${(formData.name || '').trim().toLowerCase()}`
+
+  // 1. Preferred: Deterministic Web Crypto SHA-256 (standard in modern browsers and secure contexts)
+  if (typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined') {
+    try {
+      const msgUint8 = new TextEncoder().encode(raw)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+      return `sub_${hashHex.slice(0, 32)}`
+    } catch {
+      // Fall through to randomUUID or skip
+    }
+  }
+
+  // 2. Fallback: crypto.randomUUID() if supported
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return `sub_${crypto.randomUUID()}`
+    } catch {
+      // Fall through to skip
+    }
+  }
+
+  // 3. Safely skip client-side deduplication if standard crypto APIs are unavailable
+  return null
 }
 
-function getStoredState(fingerprint) {
-  if (deliveryStateCache.has(fingerprint)) {
-    return deliveryStateCache.get(fingerprint)
+function getStoredState(opaqueId) {
+  if (!opaqueId) {
+    return { emailSent: false, discordSent: false }
+  }
+  if (deliveryStateCache.has(opaqueId)) {
+    return deliveryStateCache.get(opaqueId)
   }
   if (typeof window !== 'undefined' && window.sessionStorage) {
     try {
-      const raw = window.sessionStorage.getItem(`yorven_lead_${fingerprint}`)
+      const raw = window.sessionStorage.getItem(`yorven_lead_${opaqueId}`)
       if (raw) {
         const parsed = JSON.parse(raw)
-        deliveryStateCache.set(fingerprint, parsed)
+        deliveryStateCache.set(opaqueId, parsed)
         return parsed
       }
     } catch {
-      // Ignore sessionStorage errors (e.g. storage disabled)
+      // Ignore sessionStorage errors (e.g. storage disabled or quota exceeded)
     }
   }
   return { emailSent: false, discordSent: false }
 }
 
-function setStoredState(fingerprint, state) {
-  deliveryStateCache.set(fingerprint, state)
+function setStoredState(opaqueId, state) {
+  if (!opaqueId) return
+  deliveryStateCache.set(opaqueId, state)
   if (typeof window !== 'undefined' && window.sessionStorage) {
     try {
-      window.sessionStorage.setItem(`yorven_lead_${fingerprint}`, JSON.stringify(state))
+      window.sessionStorage.setItem(`yorven_lead_${opaqueId}`, JSON.stringify(state))
     } catch {
       // Ignore quota or security errors
     }
@@ -63,8 +99,8 @@ export async function dispatchLead(formData) {
   }
 
   isSubmitting = true
-  const fingerprint = getFingerprint(formData)
-  const state = getStoredState(fingerprint)
+  const opaqueId = await getOpaqueFingerprint(formData)
+  const state = getStoredState(opaqueId)
 
   try {
     let emailSuccess = state.emailSent
@@ -130,7 +166,7 @@ export async function dispatchLead(formData) {
     }
 
     // Update state cache for this submission
-    setStoredState(fingerprint, state)
+    setStoredState(opaqueId, state)
 
     // Evaluate Result
     if (emailSuccess && discordSuccess) {

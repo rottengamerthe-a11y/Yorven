@@ -12,7 +12,6 @@ export const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Yorven',
-  alternateName: 'Yorven Technologies',
   url: SITE_URL,
   logo: DEFAULT_OG_IMAGE,
   email: 'projects@yorven.in',
@@ -331,8 +330,8 @@ export const seoRoutes = {
     ]
   },
   '/privacy': {
-    title: 'Privacy Policy — Yorven Technologies',
-    description: 'Privacy policy and data governance practices for Yorven Technologies.',
+    title: 'Privacy Policy — Yorven',
+    description: 'Privacy policy and data governance practices for Yorven digital product studio.',
     canonical: `${SITE_URL}/privacy`,
     ogType: 'website',
     ogImage: DEFAULT_OG_IMAGE,
@@ -347,8 +346,8 @@ export const seoRoutes = {
     ]
   },
   '/terms': {
-    title: 'Terms of Use — Yorven Technologies',
-    description: 'Terms and conditions governing the use of the Yorven Technologies website and services.',
+    title: 'Terms of Service — Yorven',
+    description: 'Terms and conditions governing the use of Yorven website and development services.',
     canonical: `${SITE_URL}/terms`,
     ogType: 'website',
     ogImage: DEFAULT_OG_IMAGE,
@@ -357,8 +356,24 @@ export const seoRoutes = {
       {
         '@context': 'https://schema.org',
         '@type': 'WebPage',
-        name: 'Terms of Use',
+        name: 'Terms of Service',
         url: `${SITE_URL}/terms`
+      }
+    ]
+  },
+  '/cookies': {
+    title: 'Cookie Policy — Yorven',
+    description: 'Information on functional cookies, browser web storage, and zero-tracking practices on yorven.in.',
+    canonical: `${SITE_URL}/cookies`,
+    ogType: 'website',
+    ogImage: DEFAULT_OG_IMAGE,
+    robots: 'index, follow',
+    schema: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Cookie Policy',
+        url: `${SITE_URL}/cookies`
       }
     ]
   },

@@ -50,7 +50,7 @@ export function DashboardLogin() {
     <div className="auth-page-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-brand-eyebrow">Yorven Technologies</div>
+          <div className="auth-brand-eyebrow">Yorven</div>
           <h1 className="auth-title">Studio Control</h1>
           <p className="auth-subtitle">Private SEO Dashboard & Data Synchronization</p>
         </div>

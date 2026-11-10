@@ -386,6 +386,7 @@ export const pageMeta = {
   '/work/modern-classes': ['Modern Classes Patna Case Study — Yorven', 'A learning app for Modern Classes Patna: live classes, mock tests, and bilingual notes.'],
   '/about': ['About — Yorven', 'Yorven is an independent digital product studio.'],
   '/contact': ['Contact — Yorven', 'Start a thoughtful conversation about your next digital product.'],
-  '/privacy': ['Privacy policy — Yorven', 'Privacy policy structure for Yorven, pending approved legal text.'],
-  '/terms': ['Terms of use — Yorven', 'Terms of use structure for Yorven, pending approved legal text.']
+  '/privacy': ['Privacy Policy — Yorven', 'Privacy practices and data governance for Yorven digital product studio.'],
+  '/terms': ['Terms of Service — Yorven', 'Terms and conditions governing the use of Yorven website and development services.'],
+  '/cookies': ['Cookie Policy — Yorven', 'Information on cookies and storage technologies used on yorven.in.']
 }
