@@ -1,0 +1,22 @@
+{
+  "name": "yorven-crawler-worker",
+  "version": "1.0.0",
+  "description": "Dedicated single-site SEO crawler worker for https://yorven.in",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": ["crawler", "seo", "worker"],
+  "author": "Yorven",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "fast-xml-parser": "^5.0.8",
+    "robots-parser": "^3.0.1"
+  }
+}
