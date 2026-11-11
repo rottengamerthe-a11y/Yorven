@@ -55,6 +55,7 @@ body {
   overflow-x: clip;
 }
 body.menu-open { overflow: hidden; }
+body.menu-open .nav-wrap { z-index: 30; }
 ::selection { background: var(--teal); color: var(--lime); }
 body { transition: background-color var(--motion-story) var(--ease-in-out), color var(--motion-story) var(--ease-in-out); }
 html[data-theme="teal"] body { background: var(--teal); color: var(--cream); }
