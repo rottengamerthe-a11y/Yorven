@@ -928,7 +928,7 @@ function ServiceRow({ service, open, onToggle, index }) {
   )
 }
 function WorkVisualContent({ item }) {
-  if (item.slug === 'payper-ai') {
+  if (item.slug === 'proofpay-ai') {
     return (
       <div className="payper-mockup" aria-hidden="true">
         <div className="mockup-header">
@@ -943,12 +943,12 @@ function WorkVisualContent({ item }) {
         <div className="mockup-metrics">
           <div className="mockup-metric-card">
             <small>Active tracked</small>
-            <div className="mockup-metric-val">₹8,67,500</div>
+            <div className="mockup-metric-val">$104,200</div>
             <span className="mockup-metric-sub green-sub">+24% recovered</span>
           </div>
           <div className="mockup-metric-card">
             <small>Overdue risk</small>
-            <div className="mockup-metric-val overdue-val">₹1,18,400</div>
+            <div className="mockup-metric-val overdue-val">$14,200</div>
             <span className="mockup-metric-sub orange-sub">3 flagged</span>
           </div>
         </div>
@@ -959,7 +959,7 @@ function WorkVisualContent({ item }) {
               <span className="ledger-id">INV-2026-041</span>
             </div>
             <div className="ledger-cell-bottom">
-              <span className="ledger-amount">₹70,800</span>
+              <span className="ledger-amount">$8,500</span>
               <span className="ledger-pill overdue">16d Overdue</span>
             </div>
           </div>
@@ -969,7 +969,7 @@ function WorkVisualContent({ item }) {
               <span className="ledger-id">INV-2026-039</span>
             </div>
             <div className="ledger-cell-bottom">
-              <span className="ledger-amount">₹1,18,400</span>
+              <span className="ledger-amount">$14,200</span>
               <span className="ledger-pill pending">Due in 3d</span>
             </div>
           </div>
@@ -1384,8 +1384,8 @@ function AurixShowcase({ item }) {
   )
 }
 
-/* --- High-Fidelity Product Showcase: PayperAI SaaS Platform --- */
-function PayperAIShowcase({ item }) {
+/* --- High-Fidelity Product Showcase: ProofpayAI SaaS Platform --- */
+function ProofpayAIShowcase({ item }) {
   return (
     <div className="cs-showcase-container payper-showcase-container">
       {/* Sleek Browser Window Frame */}
@@ -1426,17 +1426,17 @@ function PayperAIShowcase({ item }) {
       <div className="payper-live-kpi-row">
         <div className="kpi-banner-tile">
           <small>OUTSTANDING TRACKED</small>
-          <strong>₹28,75,000</strong>
+          <strong>$34,500</strong>
           <span className="kpi-trend neutral">4 Active Accounts</span>
         </div>
         <div className="kpi-banner-tile">
           <small>AUTO-RECOVERED</small>
-          <strong className="text-lime">₹86,83,400</strong>
+          <strong className="text-lime">$104,200</strong>
           <span className="kpi-trend up">+24% on-time settlement</span>
         </div>
         <div className="kpi-banner-tile">
           <small>OVERDUE AT RISK</small>
-          <strong className="text-danger">₹2,15,000</strong>
+          <strong className="text-danger">$25,800</strong>
           <span className="kpi-trend down">3 Accounts flagged</span>
         </div>
         <div className="kpi-banner-tile">
@@ -1797,7 +1797,7 @@ function CaseStudy() {
 
       {/* 2. Primary Focal Showcase */}
       <section className="cs-primary-showcase" aria-label="Product Showcase">
-        {item.slug === 'payper-ai' && <PayperAIShowcase item={item} />}
+        {item.slug === 'proofpay-ai' && <ProofpayAIShowcase item={item} />}
         {item.slug === 'racers-vault' && <RacersVaultShowcase item={item} />}
         {item.slug === 'aurix' && <AurixShowcase item={item} />}
         {item.slug === 'modern-classes' && <ModernClassesShowcase item={item} />}

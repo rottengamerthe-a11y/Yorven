@@ -49,7 +49,7 @@ export const services = [
       'Reactive user interfaces, API integration, and telemetry instrumentation',
       'Automated testing, continuous deployment, and app store release workflows'
     ],
-    caseStudySlugs: ['payper-ai', 'racers-vault']
+    caseStudySlugs: ['proofpay-ai', 'racers-vault']
   },
   {
     slug: 'systems',
@@ -80,9 +80,9 @@ export const services = [
 
 export const work = [
   {
-    slug: 'payper-ai',
+    slug: 'proofpay-ai',
     label: 'Web Application',
-    title: 'PayperAI',
+    title: 'Proofpay AI',
     subtitle: 'Receivables intelligence and automated cash flow operating system',
     type: 'Receivables AI · SaaS & Fintech',
     tagline: 'Eliminate overdue receivables with predictive default risk scoring and automated recovery',
