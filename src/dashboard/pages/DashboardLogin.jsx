@@ -126,6 +126,10 @@ export function DashboardLogin() {
             <Link to="/" style={{ fontSize: '12px', color: '#9cb5af', textDecoration: 'none' }}>
               ← Back to public studio
             </Link>
+            <br />
+            <Link to="/dashboard/enroll" style={{ fontSize: '12px', color: '#9cb5af', textDecoration: 'none' }}>
+              Enroll TOTP MFA
+            </Link>
           </div>
         </form>
       </div>

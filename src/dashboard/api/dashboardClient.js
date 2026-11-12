@@ -143,6 +143,46 @@ export async function logoutApi() {
   }
 }
 
+
+// ------------------------------------------------------------
+// MFA Enrollment API
+// ------------------------------------------------------------
+/** Enroll a new TOTP factor for the owner */
+export async function enrollMfaApi(email, password) {
+  const res = await apiRequest('/api/auth/mfa-enroll', {
+    method: 'POST',
+    body: { email, password }
+  });
+  if (!res.ok) {
+    const err = new Error(res.data?.message || res.data?.error || 'Enrollment failed');
+    err.status = res.status;
+    err.code = res.data?.error || 'ENROLL_FAILED';
+    throw err;
+  }
+  return res.data; // { factorId, qrCode }
+}
+
+/** Verify TOTP code for the just‑enrolled factor */
+export async function enrollMfaVerifyApi(code) {
+  const res = await apiRequest('/api/auth/mfa-enroll-verify', {
+    method: 'POST',
+    body: { code }
+  });
+  if (!res.ok) {
+    const err = new Error(res.data?.message || res.data?.error || 'Verification failed');
+    err.status = res.status;
+    err.code = res.data?.error || 'VERIFY_FAILED';
+    throw err;
+  }
+  return res.data;
+}
+
+// ------------------------------------------------------------
+// Existing APIs (unchanged)
+// ------------------------------------------------------------
+
+
+
 // ============================================================================
 // SEO Dashboard Endpoints
 // ============================================================================
