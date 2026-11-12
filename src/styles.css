@@ -89,8 +89,41 @@ img { max-width: 100%; }
   pointer-events: auto;
 }
 
-.nav-wrap { position: fixed; inset: 0 0 auto; z-index: 20; height: 80px; background: rgba(244,240,230,.86); border-bottom: 1px solid transparent; transition: background .25s, border-color .25s, box-shadow .25s; }
-.nav-scrolled .nav-wrap { background: rgba(244,240,230,.94); border-color: var(--line); box-shadow: 0 12px 30px rgba(8,45,44,.06); }
+/* Nav: always opaque background + safe-area top padding + backdrop-filter */
+.nav-wrap {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  height: calc(80px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  /* Solid fallback first (no @supports needed — backdrop-filter is progressive enhancement) */
+  background: rgba(244,240,230,1);
+  border-bottom: 1px solid transparent;
+  transition: background .25s, border-color .25s, box-shadow .25s;
+}
+/* Backdrop-blur enhancement when supported */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .nav-wrap {
+    background: rgba(244,240,230,.92);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  }
+}
+.nav-scrolled .nav-wrap {
+  background: rgba(244,240,230,1);
+  border-color: var(--line);
+  box-shadow: 0 12px 30px rgba(8,45,44,.06);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .nav-scrolled .nav-wrap {
+    background: rgba(244,240,230,.96);
+  }
+}
+/* Teal theme nav — keep contrast */
+html[data-theme="teal"] .nav-wrap { background: rgba(8,45,44,1); }
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  html[data-theme="teal"] .nav-wrap { background: rgba(8,45,44,.94); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); }
+}
 .nav { height: 100%; display: flex; align-items: center; justify-content: space-between; }
 .logo { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; width: 112px; }
 .logo img { display: block; width: 100%; height: auto; }
@@ -102,7 +135,9 @@ img { max-width: 100%; }
 .nav-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 18px; background: var(--teal); color: var(--cream); border-radius: var(--radius); transition: transform .2s, background .2s; }
 .nav-contact:hover { background: var(--green); transform: translateY(-2px); }
 .menu-button { display: none; border: 0; background: transparent; color: var(--teal); width: 44px; height: 44px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
-.nav-wrap + main { padding-top: 80px; }
+.nav-wrap + main { padding-top: calc(80px + env(safe-area-inset-top, 0px)); }
+/* scroll-padding-top accounts for fixed header height + safe area */
+html { scroll-padding-top: calc(80px + env(safe-area-inset-top, 0px)); }
 #services { scroll-margin-top: 96px; }
 
 :focus-visible { outline: 3px solid var(--green); outline-offset: 4px; }
@@ -946,8 +981,8 @@ h2 { margin-bottom: 26px; font-size: clamp(40px, 5vw, 72px); line-height: .98; l
 .dot-red { background: #ff5f56; }
 .dot-yellow { background: #ffbd2e; }
 .dot-green { background: #27c93f; }
-.browser-url-bar { display: flex; align-items: center; gap: 6px; font: 600 11px/1.2 var(--sans); color: #86a89c; background: rgba(0,0,0,0.35); padding: 5px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); flex: 1; max-width: 380px; justify-content: center; }
-.browser-open-btn { display: inline-flex; align-items: center; gap: 6px; font: 700 11px/1.2 var(--sans); color: var(--lime); background: rgba(215,237,131,0.08); border: 1px solid rgba(215,237,131,0.3); padding: 5px 12px; border-radius: 6px; text-decoration: none; transition: all .2s; }
+.browser-url-bar { display: flex; align-items: center; gap: 6px; font: 600 11px/1.2 var(--sans); color: #86a89c; background: rgba(0,0,0,0.35); padding: 5px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); flex: 1; max-width: 380px; justify-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.browser-open-btn { display: inline-flex; align-items: center; gap: 6px; font: 700 11px/1.2 var(--sans); color: var(--lime); background: rgba(215,237,131,0.08); border: 1px solid rgba(215,237,131,0.3); padding: 5px 12px; border-radius: 6px; text-decoration: none; transition: all .2s; flex-shrink: 0; }
 .browser-open-btn:hover { background: var(--lime); color: #000; box-shadow: 0 0 15px rgba(215,237,131,0.35); }
 .browser-screenshot-viewport { position: relative; width: 100%; max-height: 560px; overflow-y: auto; overflow-x: hidden; background: #081215; }
 .cs-browser-live-img { width: 100%; height: auto; display: block; }
@@ -1151,8 +1186,9 @@ html[data-motion="reduced"] .scroll-reveal, html[data-motion="reduced"] .stagger
 
 @media (max-width: 820px) {
   .container { width: min(100% - 32px, var(--container)); }
-  .nav-wrap { height: 64px; }
-  .nav-wrap + main { padding-top: 64px; }
+  .nav-wrap { height: calc(64px + env(safe-area-inset-top, 0px)); }
+  .nav-wrap + main { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+  html { scroll-padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
   .logo { width: 96px; min-height: 44px; }
   .menu-button { display: inline-flex; }
 
@@ -3958,6 +3994,129 @@ main,
 .browser-screenshot-viewport {
   aspect-ratio: 16 / 10;
   min-height: 280px;
+}
+
+/* ==========================================================================
+   Mobile Overrides: ProofPay Browser + KPI Carousel + Sticky CTA fixes
+   ========================================================================== */
+
+/* Sticky CTA: use env(safe-area-inset-bottom) for iPhone toolbar clearance */
+.sticky-bottom-cta {
+  bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+/* Respect prefers-reduced-motion — instant hide/show, no slide */
+@media (prefers-reduced-motion: reduce) {
+  .sticky-bottom-cta {
+    transition: opacity 0.2s ease;
+  }
+  .sticky-bottom-cta.is-visible {
+    transform: translateY(0);
+  }
+}
+
+/* Footer padding — ensure last content clears the sticky CTA + safe area */
+.footer {
+  padding-bottom: calc(80px + 16px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  /* On desktop the CTA is hidden, so restore normal footer padding */
+  .footer {
+    padding-bottom: 26px;
+  }
+}
+
+/* Footer legal links — always at least 44px tap targets */
+.footer-bottom a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 820px) {
+  /* ---- Header height + main offset (safe-area already applied inline above) ---- */
+
+  /* ---- Browser frame: crop screenshot to readable region on mobile ---- */
+  .browser-screenshot-viewport {
+    aspect-ratio: auto;
+    max-height: 220px;
+    overflow: hidden;
+  }
+  .cs-browser-live-img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    object-position: top left;
+    display: block;
+  }
+  /* URL bar must not overflow or touch edges */
+  .browser-chrome-bar {
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  .browser-url-bar {
+    flex: 1;
+    max-width: none;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+    padding: 5px 10px;
+    line-height: 1.4;
+  }
+  .url-lock {
+    display: none; /* hide emoji on small to save space */
+  }
+  .browser-open-btn {
+    display: none; /* "Open Live App" button hidden on mobile to avoid overflow */
+  }
+
+  /* ---- KPI banner: scroll-snap horizontal carousel on mobile ---- */
+  .payper-live-kpi-row {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding: 4px 16px 12px;
+    margin-left: -16px;
+    margin-right: -16px;
+    /* hide scrollbar visually but keep functional */
+    scrollbar-width: none;
+  }
+  .payper-live-kpi-row::-webkit-scrollbar { display: none; }
+  .kpi-banner-tile {
+    flex: 0 0 160px;
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+
+  /* ---- Payper small-card stat row: 2-column grid on mobile ---- */
+  .mockup-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* ---- footer-bottom: stack cleanly ---- */
+  .footer-bottom {
+    display: block;
+  }
+  .footer-bottom div {
+    margin-top: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+/* dvh: use dynamic viewport height for the mobile nav drawer */
+@supports (height: 100dvh) {
+  @media (max-width: 820px) {
+    .nav-links {
+      height: 100dvh;
+    }
+  }
 }
 
 .mc-scroll-frame .img-fallback-tile,

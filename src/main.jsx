@@ -19,6 +19,7 @@ import { PrivacyPolicy, TermsOfService, CookiePolicy } from './components/legal/
 import { AuthProvider } from './dashboard/context/AuthContext'
 import { DashboardLayout } from './dashboard/components/DashboardLayout'
 import { DashboardLogin } from './dashboard/pages/DashboardLogin'
+import { DashboardEnroll } from './dashboard/pages/DashboardEnroll'
 import { DashboardMfa } from './dashboard/pages/DashboardMfa'
 import { DashboardOverview } from './dashboard/pages/DashboardOverview'
 import { DashboardPages } from './dashboard/pages/DashboardPages'
@@ -354,7 +355,10 @@ function MarqueeRow({ items, reverse = false }) {
 
 function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
   const [visible, setVisible] = useState(false)
+  const ctaRef = useRef(null)
+
   useEffect(() => {
+    // Show after scrolling 400px
     const handleScroll = () => {
       if (typeof window !== 'undefined' && window.scrollY > 400) {
         setVisible(true)
@@ -364,11 +368,32 @@ function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
+
+    // Hide when footer is in view (IntersectionObserver)
+    const footer = document.querySelector('.footer')
+    if (!footer) return () => window.removeEventListener('scroll', handleScroll)
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(false)
+        } else {
+          // Only re-show if we're scrolled past 400px
+          if (window.scrollY > 400) setVisible(true)
+        }
+      },
+      { threshold: 0.01 }
+    )
+    io.observe(footer)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      io.disconnect()
+    }
   }, [])
 
   return (
-    <div className={`sticky-bottom-cta ${visible ? 'is-visible' : ''}`} role="region" aria-label="Quick mobile action">
+    <div ref={ctaRef} className={`sticky-bottom-cta ${visible ? 'is-visible' : ''}`} role="region" aria-label="Quick mobile action">
       <div className="container sticky-cta-inner">
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer" className="button button-lime sticky-btn">
@@ -918,12 +943,12 @@ function WorkVisualContent({ item }) {
         <div className="mockup-metrics">
           <div className="mockup-metric-card">
             <small>Active tracked</small>
-            <div className="mockup-metric-val">$104,200</div>
+            <div className="mockup-metric-val">₹8,67,500</div>
             <span className="mockup-metric-sub green-sub">+24% recovered</span>
           </div>
           <div className="mockup-metric-card">
             <small>Overdue risk</small>
-            <div className="mockup-metric-val overdue-val">$14,200</div>
+            <div className="mockup-metric-val overdue-val">₹1,18,400</div>
             <span className="mockup-metric-sub orange-sub">3 flagged</span>
           </div>
         </div>
@@ -934,7 +959,7 @@ function WorkVisualContent({ item }) {
               <span className="ledger-id">INV-2026-041</span>
             </div>
             <div className="ledger-cell-bottom">
-              <span className="ledger-amount">$8,500</span>
+              <span className="ledger-amount">₹70,800</span>
               <span className="ledger-pill overdue">16d Overdue</span>
             </div>
           </div>
@@ -944,7 +969,7 @@ function WorkVisualContent({ item }) {
               <span className="ledger-id">INV-2026-039</span>
             </div>
             <div className="ledger-cell-bottom">
-              <span className="ledger-amount">$14,200</span>
+              <span className="ledger-amount">₹1,18,400</span>
               <span className="ledger-pill pending">Due in 3d</span>
             </div>
           </div>
@@ -1401,17 +1426,17 @@ function PayperAIShowcase({ item }) {
       <div className="payper-live-kpi-row">
         <div className="kpi-banner-tile">
           <small>OUTSTANDING TRACKED</small>
-          <strong>$34,500</strong>
+          <strong>₹28,75,000</strong>
           <span className="kpi-trend neutral">4 Active Accounts</span>
         </div>
         <div className="kpi-banner-tile">
           <small>AUTO-RECOVERED</small>
-          <strong className="text-lime">$104,200</strong>
+          <strong className="text-lime">₹86,83,400</strong>
           <span className="kpi-trend up">+24% on-time settlement</span>
         </div>
         <div className="kpi-banner-tile">
           <small>OVERDUE AT RISK</small>
-          <strong className="text-danger">$25,800</strong>
+          <strong className="text-danger">₹2,15,000</strong>
           <span className="kpi-trend down">3 Accounts flagged</span>
         </div>
         <div className="kpi-banner-tile">
@@ -2768,6 +2793,8 @@ export function AppRoutes() {
         </Route>
 
         {/* Public Marketing Routes with Public Studio Layout */}
+        {/* Add enrollment route */}
+        <Route path="/dashboard/enroll" element={<DashboardEnroll />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<ServicesHub />} />
