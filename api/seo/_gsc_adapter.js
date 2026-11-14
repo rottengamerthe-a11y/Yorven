@@ -4,6 +4,10 @@
  * Follows Frozen Architecture (Revision 11 Final) strictly.
  */
 
+import { getGoogleAccessToken } from './_google_auth.js';
+
+export const GSC_OAUTH_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
+
 // Yorven's 9 monitored routes
 export const YORVEN_MONITORED_PATHS = new Set([
   '/',
@@ -116,6 +120,17 @@ export async function fetchGscSearchAnalytics({
   const maxRetries = isManual ? 0 : 3;
 
   const siteUrl = process.env.GSC_SITE_URL || 'https://yorven.in/';
+
+  // If using custom mock fetcher, allow running without real Google credentials
+  if (!customGscFetcher) {
+    if (!process.env.GSC_CLIENT_EMAIL || !process.env.GSC_CLIENT_EMAIL.trim()) {
+      throw new Error('CONFIG_ERROR: GSC_CLIENT_EMAIL must be configured');
+    }
+    if (!process.env.GSC_PRIVATE_KEY || !process.env.GSC_PRIVATE_KEY.trim()) {
+      throw new Error('CONFIG_ERROR: GSC_PRIVATE_KEY must be configured');
+    }
+  }
+
   const allRows = [];
   let startRow = 0;
   let pageCount = 0;
@@ -152,31 +167,39 @@ export async function fetchGscSearchAnalytics({
         if (customGscFetcher) {
           responseData = await customGscFetcher({ siteUrl, payload, signal: combinedSignal });
         } else {
-          // If no custom fetcher and no Google credentials, return empty or mock data
-          if (!process.env.GSC_CLIENT_EMAIL || !process.env.GSC_PRIVATE_KEY) {
-            // Unconfigured credentials return safe empty response
-            responseData = { rows: [] };
-          } else {
-            // Real Google Search Console API fetch
-            const gscEndpoint = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
-            const res = await fetch(gscEndpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.GSC_ACCESS_TOKEN || ''}`
-              },
-              body: JSON.stringify(payload),
-              signal: combinedSignal
-            });
+          // Obtain valid service-account OAuth2 access token
+          const accessToken = await getGoogleAccessToken({
+            clientEmail: process.env.GSC_CLIENT_EMAIL,
+            privateKey: process.env.GSC_PRIVATE_KEY,
+            scope: GSC_OAUTH_SCOPE,
+            signal: combinedSignal
+          });
 
-            if (!res.ok) {
-              const errText = await res.text().catch(() => '');
-              const err = new Error(`GSC API HTTP ${res.status}: ${errText}`);
-              err.status = res.status;
-              throw err;
+          // Real Google Search Console API fetch
+          const gscEndpoint = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
+          const res = await fetch(gscEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload),
+            signal: combinedSignal
+          });
+
+          if (!res.ok) {
+            let errText = '';
+            try {
+              const errJson = await res.json();
+              errText = errJson?.error?.message || JSON.stringify(errJson);
+            } catch {
+              errText = await res.text().catch(() => '');
             }
-            responseData = await res.json();
+            const err = new Error(`GSC API HTTP ${res.status}: ${errText}`);
+            err.status = res.status;
+            throw err;
           }
+          responseData = await res.json();
         }
 
         clearTimeout(timeoutId);
@@ -184,6 +207,10 @@ export async function fetchGscSearchAnalytics({
       } catch (err) {
         clearTimeout(timeoutId);
         lastError = err;
+        // Do not retry on configuration errors or client auth/permission rejection (401, 403)
+        if (err.message?.startsWith('CONFIG_ERROR:') || err.status === 401 || err.status === 403) {
+          throw err;
+        }
         attempt++;
         if (attempt <= maxRetries && !signal?.aborted) {
           const backoffMs = Math.pow(2, attempt - 1) * 1000;

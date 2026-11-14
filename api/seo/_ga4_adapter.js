@@ -5,6 +5,9 @@
  */
 
 import { YORVEN_MONITORED_PATHS } from './_gsc_adapter.js';
+import { getGoogleAccessToken } from './_google_auth.js';
+
+export const GA4_OAUTH_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 
 export const ALLOWED_GA4_ORIGINS = new Set([
   'https://yorven.in'
@@ -88,6 +91,26 @@ export function getCustomGa4Fetcher() {
 }
 
 /**
+ * Validates GA4 property ID. Must be a non-empty numeric string (or 'properties/12345').
+ *
+ * @param {string} propertyId
+ * @returns {string} Clean numeric property ID
+ */
+export function validateGa4PropertyId(propertyId) {
+  if (!propertyId || typeof propertyId !== 'string') {
+    throw new Error('CONFIG_ERROR: GA4_PROPERTY_ID is required and must be configured');
+  }
+  let clean = propertyId.trim();
+  if (clean.startsWith('properties/')) {
+    clean = clean.slice('properties/'.length).trim();
+  }
+  if (!/^\d+$/.test(clean)) {
+    throw new Error(`CONFIG_ERROR: Malformed GA4_PROPERTY_ID '${propertyId}': must be numeric`);
+  }
+  return clean;
+}
+
+/**
  * Fetches organic landing page performance from GA4 and aggregates rows in-memory
  * to guarantee at most ONE output row per (page_id, metric_date).
  *
@@ -111,7 +134,19 @@ export async function fetchGa4Metrics({
   const requestTimeoutMs = isManual ? 1200 : 5000;
   const maxRetries = isManual ? 0 : 3;
 
-  const propertyId = process.env.GA4_PROPERTY_ID || '';
+  // Validate GA4 property ID upfront
+  const propertyId = validateGa4PropertyId(process.env.GA4_PROPERTY_ID);
+
+  // If using custom mock fetcher, allow running without real Google credentials
+  if (!customGa4Fetcher) {
+    if (!process.env.GA4_CLIENT_EMAIL || !process.env.GA4_CLIENT_EMAIL.trim()) {
+      throw new Error('CONFIG_ERROR: GA4_CLIENT_EMAIL must be configured');
+    }
+    if (!process.env.GA4_PRIVATE_KEY || !process.env.GA4_PRIVATE_KEY.trim()) {
+      throw new Error('CONFIG_ERROR: GA4_PRIVATE_KEY must be configured');
+    }
+  }
+
   const allRawRows = [];
   let pageCount = 0;
   let offset = 0;
@@ -165,29 +200,38 @@ export async function fetchGa4Metrics({
         if (customGa4Fetcher) {
           responseData = await customGa4Fetcher({ propertyId, payload, signal: combinedSignal });
         } else {
-          if (!process.env.GA4_CLIENT_EMAIL || !process.env.GA4_PRIVATE_KEY) {
-            // Unconfigured credentials return safe empty report
-            responseData = { rows: [] };
-          } else {
-            const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`;
-            const res = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.GA4_ACCESS_TOKEN || ''}`
-              },
-              body: JSON.stringify(payload),
-              signal: combinedSignal
-            });
+          // Obtain valid service-account OAuth2 access token
+          const accessToken = await getGoogleAccessToken({
+            clientEmail: process.env.GA4_CLIENT_EMAIL,
+            privateKey: process.env.GA4_PRIVATE_KEY,
+            scope: GA4_OAUTH_SCOPE,
+            signal: combinedSignal
+          });
 
-            if (!res.ok) {
-              const errText = await res.text().catch(() => '');
-              const err = new Error(`GA4 API HTTP ${res.status}: ${errText}`);
-              err.status = res.status;
-              throw err;
+          const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload),
+            signal: combinedSignal
+          });
+
+          if (!res.ok) {
+            let errText = '';
+            try {
+              const errJson = await res.json();
+              errText = errJson?.error?.message || JSON.stringify(errJson);
+            } catch {
+              errText = await res.text().catch(() => '');
             }
-            responseData = await res.json();
+            const err = new Error(`GA4 API HTTP ${res.status}: ${errText}`);
+            err.status = res.status;
+            throw err;
           }
+          responseData = await res.json();
         }
 
         clearTimeout(timeoutId);
@@ -195,6 +239,10 @@ export async function fetchGa4Metrics({
       } catch (err) {
         clearTimeout(timeoutId);
         lastError = err;
+        // Do not retry on configuration errors or client auth/permission rejection (401, 403)
+        if (err.message?.startsWith('CONFIG_ERROR:') || err.status === 401 || err.status === 403) {
+          throw err;
+        }
         attempt++;
         if (attempt <= maxRetries && !signal?.aborted) {
           const backoffMs = Math.pow(2, attempt - 1) * 1000;
