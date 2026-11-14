@@ -16,6 +16,8 @@ import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
 import { SafeImage } from './components/ui/SafeImage'
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from './components/legal/LegalPages'
+import { CookieBanner } from './components/ui/CookieBanner'
+import { initGA, trackPageView } from './services/analytics'
 import { AuthProvider } from './dashboard/context/AuthContext'
 import { DashboardLayout } from './dashboard/components/DashboardLayout'
 import { DashboardLogin } from './dashboard/pages/DashboardLogin'
@@ -558,7 +560,33 @@ function Footer() {
       <div><p className="eyebrow">Get in touch</p><a href="mailto:projects@yorven.in">projects@yorven.in</a>{whatsapp && <a href={whatsapp}>WhatsApp</a>}</div>
       <div><p className="eyebrow">Elsewhere</p><a href="https://x.com/YORVENin?s=20" target="_blank" rel="noreferrer">X / Twitter</a><a href="https://www.instagram.com/yorven.in/" target="_blank" rel="noreferrer">Instagram</a><MotionToggle /></div>
     </div>
-    <div className="container footer-bottom"><span>© {new Date().getFullYear()} Yorven</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/cookies">Cookies</Link></div></div>
+    <div className="container footer-bottom">
+      <span>© {new Date().getFullYear()} Yorven</span>
+      <div>
+        <Link to="/privacy">Privacy</Link>
+        <Link to="/terms">Terms</Link>
+        <Link to="/cookies">Cookies</Link>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('yorven_open_cookie_preferences'))
+            }
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'inherit',
+            font: 'inherit',
+            cursor: 'pointer',
+            padding: 0,
+            textDecoration: 'underline'
+          }}
+        >
+          Cookie Choices
+        </button>
+      </div>
+    </div>
   </footer>
 }
 
@@ -2774,10 +2802,31 @@ function DashboardRouteWrapper() {
 }
 
 export function AppRoutes() {
+  const location = useLocation()
+  const prevNavRef = useRef(null)
+
+  useEffect(() => {
+    // Basic Consent Mode: initGA will only run if user has already granted consent
+    initGA()
+  }, [])
+
+  useEffect(() => {
+    const currentPath = `${location.pathname}${location.search}`
+    if (prevNavRef.current !== currentPath) {
+      prevNavRef.current = currentPath
+      trackPageView({
+        pathname: location.pathname,
+        search: location.search,
+        title: typeof document !== 'undefined' ? document.title : 'Yorven'
+      })
+    }
+  }, [location.pathname, location.search])
+
   return (
     <>
       <ScrollToTop />
       <SEOHead />
+      <CookieBanner />
       <Routes>
         {/* Private Studio Dashboard Control Room */}
         <Route element={<DashboardRouteWrapper />}>

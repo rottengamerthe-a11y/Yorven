@@ -120,7 +120,7 @@ export function PrivacyPolicy() {
         <li><strong>Vercel Inc.:</strong> Static edge hosting, CDN delivery, SSL termination, and serverless compute infrastructure.</li>
         <li><strong>Supabase Inc.:</strong> Relational database and GoTrue identity infrastructure, utilized exclusively for the private studio management dashboard.</li>
         <li><strong>Google LLC (Google Fonts):</strong> Typography stylesheets for DM Serif, Manrope, and DM Mono. Requests transmit standard HTTP headers to Google CDN nodes.</li>
-        <li><strong>Search Console & GA4 (Server-side):</strong> Aggregated search performance and traffic data are queried server-to-server via backend service accounts. <strong>No client-side Google Analytics scripts or tracking cookies run in your browser.</strong></li>
+        <li><strong>Google LLC (Google Analytics 4):</strong> Under our strict Basic Consent policy, Google Analytics client scripts (<code className="prose-inline-code">gtag.js</code>) and analytics cookies do not load unless you explicitly accept analytics cookies. When granted, GA4 measures aggregated traffic and website interactions under Measurement ID <code className="prose-inline-code">G-91QDYYW484</code> with advertising signals disabled. Private dashboard and authentication areas are strictly excluded. You can withdraw consent at any time via the Cookie Choices link in the footer.</li>
       </ul>
 
       <h2>5. Data Retention & Deletion</h2>
@@ -387,6 +387,25 @@ export function CookiePolicy() {
               </td>
             </tr>
             <tr>
+              <td><code className="prose-inline-code">_ga, _ga_*</code></td>
+              <td>Analytics (Consent-Gated)</td>
+              <td>HTTP Cookie (Google Analytics 4)</td>
+              <td>Up to 2 years</td>
+              <td>
+                When analytics consent is granted, Google Analytics 4 sets pseudonymous cookies (<code className="prose-inline-code">_ga</code>) to calculate visitor, session, and campaign data for aggregated studio analytics under Measurement ID <code className="prose-inline-code">G-91QDYYW484</code>.
+                Disabled by default until explicit consent is given.
+              </td>
+            </tr>
+            <tr>
+              <td><code className="prose-inline-code">yorven_cookie_consent</code></td>
+              <td>Functional Preference</td>
+              <td>Browser localStorage</td>
+              <td>Persistent (until cleared)</td>
+              <td>
+                Stores your analytics consent preference (<code className="prose-inline-code">granted</code> or <code className="prose-inline-code">denied</code>).
+              </td>
+            </tr>
+            <tr>
               <td><code className="prose-inline-code">__Host-yorven-refresh</code></td>
               <td>Strictly Necessary (Admin Only)</td>
               <td>HTTP Cookie (HttpOnly, Secure, SameSite=Strict, Path=/)</td>
@@ -410,26 +429,20 @@ export function CookiePolicy() {
         </table>
       </div>
 
-      <h2>3. No Client-Side Advertising or Tracking Scripts</h2>
+      <h2>3. Advertising and Analytics Policy</h2>
       <p>
-        A rigorous audit of our production codebase confirmed:
+        Our technical compliance architecture ensures:
       </p>
       <ul>
-        <li><CheckCircle2 size={16} className="inline-check" /> <strong>No Google Analytics client scripts (<code className="prose-inline-code">gtag.js</code> or <code className="prose-inline-code">analytics.js</code>)</strong> are installed in your browser.</li>
-        <li><CheckCircle2 size={16} className="inline-check" /> <strong>No Facebook / Meta Pixels</strong> or social tracking beacons are embedded.</li>
-        <li><CheckCircle2 size={16} className="inline-check" /> <strong>No third-party behavioural advertising networks</strong> receive tracking identifiers from your visit.</li>
+        <li><CheckCircle2 size={16} className="inline-check" /> <strong>Zero advertising trackers:</strong> No Facebook / Meta Pixels, remarketing tags, or third-party behavioral ad network scripts are deployed.</li>
+        <li><CheckCircle2 size={16} className="inline-check" /> <strong>Basic Consent Enforcement:</strong> Google Analytics 4 is strictly gated behind Basic Consent Mode. No scripts are fetched, no cookies are written, and no network pings occur unless you actively click "Accept Analytics".</li>
+        <li><CheckCircle2 size={16} className="inline-check" /> <strong>Protected Private Areas:</strong> Private dashboard routes (<code className="prose-inline-code">/dashboard/*</code>), authentication flows, and MFA verification endpoints are strictly excluded from client telemetry even after consent.</li>
       </ul>
-      <p>
-        Any aggregated performance metrics we evaluate (such as overall search queries on Google or total page views) are ingested
-        server-to-server via backend APIs.
-      </p>
 
-      <h2>4. Current Consent Banner Practice</h2>
+      <h2>4. Cookie Consent Management & Withdrawal</h2>
       <p>
-        Yorven currently does not display a cookie-consent banner. The website uses only the functional preference and administrative storage
-        mechanisms described in the inventory above, and does not deploy client-side advertising or marketing trackers. Legal requirements
-        regarding cookie notices and consent mechanisms vary across jurisdictions and may change over time; we regularly review our practices
-        to ensure appropriate transparency.
+        Yorven provides a clear cookie choice banner for all visitors. Analytics scripts and storage are completely blocked until you actively choose to accept cookies.
+        You can change or withdraw your consent choices at any time by clicking the <strong>“Cookie Choices”</strong> link in the footer of any public page, which reopens your preference controls and allows you to immediately revoke analytics permissions and purge analytics cookies.
       </p>
 
       <h2>5. How You Can Control Browser Storage</h2>
