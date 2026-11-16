@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/api/auth/mfa-enroll-verify", "destination": "/api/auth/mfa-enroll?action=verify" },
     { "source": "/((?!api/).*)", "destination": "/" }
   ]
 }
