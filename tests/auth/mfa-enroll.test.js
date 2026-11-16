@@ -60,6 +60,44 @@ describe('MFA enrollment flow', () => {
     assert.deepEqual(res._json, { error: 'MFA_ALREADY_ENROLLED' });
   });
 
+  test('deletes unverified TOTP before enrollment', async () => {
+    const mockGotrue = {
+      passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
+      getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
+      deleteFactor: async () => ({ ok: true, status: 204 }),
+      createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
+    };
+    const mockDb = { checkUserOwnerRole: async () => true };
+    const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
+    const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
+    const res = mockRes();
+    await handlerEnroll(req, res);
+    assert.equal(res._status, 200);
+    assert.deepEqual(res._json, { factorId: 'fid', qrCode: '<svg></svg>' });
+  });
+
+  test('deletion failure aborts enrollment', async () => {
+    const mockGotrue = {
+      passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
+      getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
+      deleteFactor: async () => ({ ok: false, status: 500 }),
+      createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
+    };
+    const mockDb = { checkUserOwnerRole: async () => true };
+    const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
+    const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
+    const res = mockRes();
+    const origConsoleError = console.error;
+    console.error = () => {};
+    try {
+      await handlerEnroll(req, res);
+      assert.equal(res._status, 500);
+      assert.deepEqual(res._json, { error: 'MFA_ENROLL_FAILED' });
+    } finally {
+      console.error = origConsoleError;
+    }
+  });
+
   test('successful enrollment returns factorId and QR code', async () => {
     const mockGotrue = {
       passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
@@ -125,64 +163,120 @@ describe('MFA enrollment verification flow', () => {
     assert.deepEqual(res._json, { error: 'Invalid verification code format (6 digits required)' });
   });
 
-  test('invalid TOTP code is rejected', async () => {
+  test('failed verification returns INVALID_TOTP_CODE without clearing the enrollment cookie', async () => {
     const mockGotrue = {
-      createFactorChallenge: async () => ({ ok: true, data: { id: 'cid' } }),
-      verifyFactorChallenge: async () => ({ ok: false })
+      createFactorChallenge: async () => ({ ok: true, data: { id: 'cid-1' } }),
+      verifyFactorChallenge: async () => ({
+        ok: false,
+        status: 400,
+        data: { error_code: 'invalid_grant', msg: 'Invalid TOTP code' }
+      })
     };
     let clearCalled = { called: false };
     const handlerVerify = makeEnrollVerifyHandler({
       getGoTrueClient: () => mockGotrue,
       clearEnrollCookie: () => { clearCalled.called = true; }
     });
-    // Test cleanup of unverified TOTP factors before enrollment
-    test('deletes unverified TOTP before enrollment', async () => {
-      const mockGotrue = {
-        passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
-        getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
-        deleteFactor: async () => ({ ok: true, status: 204 }),
-        createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
+
+    const origConsoleError = console.error;
+    const logged = [];
+    console.error = (...args) => logged.push(args);
+
+    try {
+      const packed = makeEnrollCookie();
+      const req = {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:5173',
+          'x-requested-with': 'Yorven-Control',
+          cookie: `${COOKIE_ENROLL_NAME}=${packed}`
+        },
+        body: { code: '000000' }
       };
-      const mockDb = { checkUserOwnerRole: async () => true };
-      const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
-      const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
       const res = mockRes();
-      await handlerEnroll(req, res);
-      assert.equal(res._status, 200);
-      assert.deepEqual(res._json, { factorId: 'fid', qrCode: '<svg></svg>' });
+      await handlerVerify(req, res);
+      assert.equal(res._status, 401);
+      assert.deepEqual(res._json, { error: 'INVALID_TOTP_CODE' });
+      assert.equal(clearCalled.called, false, 'clearEnrollCookie MUST NOT be called on TOTP verification failure');
+
+      // Verify safe diagnostic logging
+      const verifyLog = logged.find((entry) => entry[0] === 'MFA_ENROLL_VERIFY_FAILED');
+      assert.ok(verifyLog, 'MFA_ENROLL_VERIFY_FAILED must be logged');
+      assert.deepEqual(verifyLog[1], {
+        status: 400,
+        code: 'invalid_grant',
+        classification: 'INVALID_CODE'
+      });
+      const serialized = JSON.stringify(logged);
+      assert.ok(!serialized.includes('000000'), 'Must never log TOTP code');
+      assert.ok(!serialized.includes('AAL1'), 'Must never log access token');
+      assert.ok(!serialized.includes('Invalid TOTP code'), 'Must never log raw upstream message');
+    } finally {
+      console.error = origConsoleError;
+    }
+  });
+
+  test('a second verification attempt using the same enrollment session can succeed', async () => {
+    let verifyAttempts = 0;
+    const mockGotrue = {
+      createFactorChallenge: async () => ({ ok: true, data: { id: `cid-${++verifyAttempts}` } }),
+      verifyFactorChallenge: async (fId, cId, code) => {
+        if (code === '000000') {
+          return { ok: false, status: 400, data: { error_code: 'invalid_grant' } };
+        }
+        if (code === '654321') {
+          return { ok: true, status: 200, data: {} };
+        }
+        return { ok: false, status: 400 };
+      }
+    };
+
+    let clearCallCount = 0;
+    const handlerVerify = makeEnrollVerifyHandler({
+      getGoTrueClient: () => mockGotrue,
+      clearEnrollCookie: () => { clearCallCount++; }
     });
 
-    // Test deletion failure aborts enrollment
-    test('deletion failure aborts enrollment', async () => {
-      const mockGotrue = {
-        passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
-        getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
-        deleteFactor: async () => ({ ok: false, status: 500 }),
-        createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
+    const origConsoleError = console.error;
+    console.error = () => {};
+
+    try {
+      const packed = makeEnrollCookie();
+
+      // Attempt 1: Wrong code
+      const req1 = {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:5173',
+          'x-requested-with': 'Yorven-Control',
+          cookie: `${COOKIE_ENROLL_NAME}=${packed}`
+        },
+        body: { code: '000000' }
       };
-      const mockDb = { checkUserOwnerRole: async () => true };
-      const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
-      const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
-      const res = mockRes();
-      await handlerEnroll(req, res);
-      assert.equal(res._status, 500);
-      assert.deepEqual(res._json, { error: 'MFA_ENROLL_FAILED' });
-    });
-    const packed = makeEnrollCookie();
-    const req = {
-      method: 'POST',
-      headers: {
-        origin: 'http://localhost:5173',
-        'x-requested-with': 'Yorven-Control',
-        cookie: `${COOKIE_ENROLL_NAME}=${packed}`
-      },
-      body: { code: '000000' }
-    };
-    const res = mockRes();
-    await handlerVerify(req, res);
-    assert.equal(res._status, 401);
-    assert.deepEqual(res._json, { error: 'INVALID_TOTP_CODE' });
-    assert.ok(clearCalled.called, 'clearEnrollCookie should be called on failure');
+      const res1 = mockRes();
+      await handlerVerify(req1, res1);
+      assert.equal(res1._status, 401);
+      assert.deepEqual(res1._json, { error: 'INVALID_TOTP_CODE' });
+      assert.equal(clearCallCount, 0, 'First failed attempt must not clear the cookie');
+
+      // Attempt 2: Correct code using the exact same enrollment cookie
+      const req2 = {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:5173',
+          'x-requested-with': 'Yorven-Control',
+          cookie: `${COOKIE_ENROLL_NAME}=${packed}`
+        },
+        body: { code: '654321' }
+      };
+      const res2 = mockRes();
+      await handlerVerify(req2, res2);
+      assert.equal(res2._status, 200);
+      assert.deepEqual(res2._json, { success: true });
+      assert.equal(clearCallCount, 1, 'Successful verification must clear the cookie');
+    } finally {
+      console.error = origConsoleError;
+    }
   });
 
   test('successful verification clears cookie and returns success', async () => {
@@ -194,39 +288,6 @@ describe('MFA enrollment verification flow', () => {
     const handlerVerify = makeEnrollVerifyHandler({
       getGoTrueClient: () => mockGotrue,
       clearEnrollCookie: () => { cleared = true; }
-    });
-    // Test cleanup of unverified TOTP factors before enrollment
-    test('deletes unverified TOTP before enrollment', async () => {
-      const mockGotrue = {
-        passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
-        getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
-        deleteFactor: async () => ({ ok: true, status: 204 }),
-        createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
-      };
-      const mockDb = { checkUserOwnerRole: async () => true };
-      const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
-      const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
-      const res = mockRes();
-      await handlerEnroll(req, res);
-      assert.equal(res._status, 200);
-      assert.deepEqual(res._json, { factorId: 'fid', qrCode: '<svg></svg>' });
-    });
-
-    // Test deletion failure aborts enrollment
-    test('deletion failure aborts enrollment', async () => {
-      const mockGotrue = {
-        passwordSignIn: async () => ({ ok: true, data: { access_token: 'AAL1', user: { id: 'uid' } } }),
-        getUserFactors: async () => ({ ok: true, data: [{ id: 'old', factor_type: 'totp', status: 'unverified' }] }),
-        deleteFactor: async () => ({ ok: false, status: 500 }),
-        createFactor: async () => ({ ok: true, data: { id: 'fid', totp: { qr_code: '<svg></svg>' } } })
-      };
-      const mockDb = { checkUserOwnerRole: async () => true };
-      const handlerEnroll = makeEnrollHandler({ getGoTrueClient: () => mockGotrue, getDatabaseAdapter: () => mockDb });
-      const req = { method: 'POST', headers: { origin: 'http://localhost:5173', 'x-requested-with': 'Yorven-Control' }, body: { email: 'owner@yorven.in', password: 'pw' } };
-      const res = mockRes();
-      await handlerEnroll(req, res);
-      assert.equal(res._status, 500);
-      assert.deepEqual(res._json, { error: 'MFA_ENROLL_FAILED' });
     });
     const packed = makeEnrollCookie();
     const req = {
@@ -243,6 +304,57 @@ describe('MFA enrollment verification flow', () => {
     assert.equal(res._status, 200);
     assert.deepEqual(res._json, { success: true });
     assert.ok(cleared, 'clearEnrollCookie should be called on success');
+  });
+
+  test('safe diagnostic logging classifies different GoTrue failure modes safely', async () => {
+    const origConsoleError = console.error;
+    const testCases = [
+      { status: 429, data: {}, expectedClass: 'RATE_LIMITED', expectedCode: null },
+      { status: 500, data: { code: 'unexpected_failure' }, expectedClass: 'UPSTREAM_ERROR', expectedCode: 'unexpected_failure' },
+      { status: 400, data: { error_code: 'expired_challenge' }, expectedClass: 'CHALLENGE_EXPIRED', expectedCode: 'expired_challenge' },
+      { status: 422, data: { error_code: 'invalid_credentials' }, expectedClass: 'INVALID_CODE', expectedCode: 'invalid_credentials' },
+      { status: 403, data: { error_code: 'forbidden' }, expectedClass: 'VERIFICATION_FAILED', expectedCode: 'forbidden' }
+    ];
+
+    try {
+      for (const tc of testCases) {
+        const logged = [];
+        console.error = (...args) => logged.push(args);
+
+        const mockGotrue = {
+          createFactorChallenge: async () => ({ ok: true, data: { id: 'cid' } }),
+          verifyFactorChallenge: async () => ({ ok: false, status: tc.status, data: tc.data })
+        };
+        const handlerVerify = makeEnrollVerifyHandler({
+          getGoTrueClient: () => mockGotrue,
+          clearEnrollCookie: () => {}
+        });
+
+        const packed = makeEnrollCookie();
+        const req = {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost:5173',
+            'x-requested-with': 'Yorven-Control',
+            cookie: `${COOKIE_ENROLL_NAME}=${packed}`
+          },
+          body: { code: '111222' }
+        };
+        const res = mockRes();
+        await handlerVerify(req, res);
+        assert.equal(res._status, 401);
+
+        const entry = logged.find((l) => l[0] === 'MFA_ENROLL_VERIFY_FAILED');
+        assert.ok(entry, `Must log MFA_ENROLL_VERIFY_FAILED for status ${tc.status}`);
+        assert.deepEqual(entry[1], {
+          status: tc.status,
+          code: tc.expectedCode,
+          classification: tc.expectedClass
+        });
+      }
+    } finally {
+      console.error = origConsoleError;
+    }
   });
 });
 
@@ -304,22 +416,29 @@ describe('Consolidated MFA Handler & Vercel Rewrites', () => {
       getGoTrueClient: () => mockGotrue,
       clearEnrollCookie: () => { cookieCleared = true; }
     });
-    const packed = makeEnrollCookie();
-    const req = {
-      method: 'POST',
-      query: { action: 'verify' },
-      headers: {
-        origin: 'http://localhost:5173',
-        'x-requested-with': 'Yorven-Control',
-        cookie: `${COOKIE_ENROLL_NAME}=${packed}`
-      },
-      body: { code: '000000' }
-    };
-    const res = mockRes();
-    await handler(req, res);
-    assert.equal(res._status, 401);
-    assert.deepEqual(res._json, { error: 'INVALID_TOTP_CODE' });
-    assert.equal(cookieCleared, true);
+    const origConsoleError = console.error;
+    console.error = () => {};
+
+    try {
+      const packed = makeEnrollCookie();
+      const req = {
+        method: 'POST',
+        query: { action: 'verify' },
+        headers: {
+          origin: 'http://localhost:5173',
+          'x-requested-with': 'Yorven-Control',
+          cookie: `${COOKIE_ENROLL_NAME}=${packed}`
+        },
+        body: { code: '000000' }
+      };
+      const res = mockRes();
+      await handler(req, res);
+      assert.equal(res._status, 401);
+      assert.deepEqual(res._json, { error: 'INVALID_TOTP_CODE' });
+      assert.equal(cookieCleared, false, 'Invalid code in consolidated verify handler must not clear enrollment cookie');
+    } finally {
+      console.error = origConsoleError;
+    }
   });
 
   test('vercel.json routes /api/auth/mfa-enroll-verify to consolidated handler', () => {

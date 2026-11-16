@@ -186,7 +186,30 @@ export function makeEnrollVerifyHandler({ getGoTrueClient: getGoTrue = getGoTrue
 
       const verifyRes = await gotrue.verifyFactorChallenge(factorId, challengeId, code.trim(), aal1AccessToken);
       if (!verifyRes.ok) {
-        clearCookie(res);
+        let safeCode = null;
+        if (typeof verifyRes.data?.error_code === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(verifyRes.data.error_code)) {
+          safeCode = verifyRes.data.error_code;
+        } else if (typeof verifyRes.data?.code === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(verifyRes.data.code)) {
+          safeCode = verifyRes.data.code;
+        }
+
+        let classification = 'VERIFICATION_FAILED';
+        if (verifyRes.status === 429) {
+          classification = 'RATE_LIMITED';
+        } else if (verifyRes.status >= 500) {
+          classification = 'UPSTREAM_ERROR';
+        } else if (safeCode === 'expired_challenge') {
+          classification = 'CHALLENGE_EXPIRED';
+        } else if (verifyRes.status === 400 || verifyRes.status === 422) {
+          classification = 'INVALID_CODE';
+        }
+
+        console.error('MFA_ENROLL_VERIFY_FAILED', {
+          status: typeof verifyRes.status === 'number' ? verifyRes.status : 0,
+          code: safeCode,
+          classification
+        });
+
         return res.status(401).json({ error: 'INVALID_TOTP_CODE' });
       }
 
