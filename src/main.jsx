@@ -2832,6 +2832,7 @@ export function AppRoutes() {
         <Route element={<DashboardRouteWrapper />}>
           <Route path="/dashboard/login" element={<DashboardLogin />} />
           <Route path="/dashboard/mfa" element={<DashboardMfa />} />
+          <Route path="/dashboard/enroll" element={<DashboardEnroll />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard/overview" replace />} />
             <Route path="overview" element={<DashboardOverview />} />
@@ -2843,7 +2844,6 @@ export function AppRoutes() {
 
         {/* Public Marketing Routes with Public Studio Layout */}
         {/* Add enrollment route */}
-        <Route path="/dashboard/enroll" element={<DashboardEnroll />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<ServicesHub />} />
