@@ -3,6 +3,8 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 process.env.AUTH_SECRET = 'a'.repeat(64);
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://mock.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-role-key-12345';
 
 import {
   makeEnrollHandler,
@@ -345,7 +347,7 @@ describe('Consolidated MFA Handler & Vercel Rewrites', () => {
   });
 });
 
-describe('DatabaseAdapter.checkUserOwnerRole diagnostics and authorization', () => {
+describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', () => {
   let originalFetch;
   let originalConsoleError;
   let loggedErrors;
@@ -364,97 +366,168 @@ describe('DatabaseAdapter.checkUserOwnerRole diagnostics and authorization', () 
     console.error = originalConsoleError;
   }
 
-  test('successful owner row returns true without error logging', async () => {
-    globalThis.fetch = async () => ({
-      ok: true,
-      status: 200,
-      json: async () => [{ role: 'owner' }]
-    });
+  test('RPC returning true: calls auth_util.check_user_owner with correct headers, parameters, and returns true without logging', async () => {
+    let capturedUrl;
+    let capturedOptions;
+
+    globalThis.fetch = async (url, options) => {
+      capturedUrl = url;
+      capturedOptions = options;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => true
+      };
+    };
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-1');
-      assert.equal(isOwner, true);
-      assert.equal(loggedErrors.length, 0);
+      const isOwner = await db.checkUserOwnerRole('test-uuid-owner-1');
+      assert.strictEqual(isOwner, true);
+      assert.strictEqual(loggedErrors.length, 0);
+
+      assert.ok(capturedUrl.endsWith('/rest/v1/rpc/check_user_owner'), 'URL must target check_user_owner RPC');
+      assert.strictEqual(capturedOptions.method, 'POST');
+      assert.strictEqual(capturedOptions.headers['Content-Profile'], 'auth_util');
+      assert.strictEqual(capturedOptions.headers['Accept-Profile'], 'auth_util');
+      assert.strictEqual(capturedOptions.headers['Content-Type'], 'application/json');
+      assert.ok(capturedOptions.headers.apikey, 'apikey must be set');
+      assert.ok(capturedOptions.headers.Authorization.startsWith('Bearer '), 'Authorization Bearer must be set');
+
+      const body = JSON.parse(capturedOptions.body);
+      assert.deepStrictEqual(body, { p_user_id: 'test-uuid-owner-1' });
     } finally {
       restore();
     }
   });
 
-  test('successful empty result returns false without error logging', async () => {
+  test('RPC returning false: returns false without error logging', async () => {
     globalThis.fetch = async () => ({
       ok: true,
       status: 200,
-      json: async () => []
+      json: async () => false
     });
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-2');
-      assert.equal(isOwner, false);
-      assert.equal(loggedErrors.length, 0);
+      const isOwner = await db.checkUserOwnerRole('test-uuid-non-owner');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 0);
     } finally {
       restore();
     }
   });
 
-  test('non-OK PostgREST response logs OWNER_ROLE_QUERY_FAILED and returns false', async () => {
+  test('unexpected response types: never uses truthy coercion, strictly requires boolean true', async () => {
+    const invalidTruthyResponses = [
+      'true',
+      1,
+      [{ role: 'owner' }],
+      { role: 'owner' },
+      'owner',
+      [true],
+      null,
+      undefined
+    ];
+
+    try {
+      const db = new DatabaseAdapter();
+      for (const invalidResp of invalidTruthyResponses) {
+        globalThis.fetch = async () => ({
+          ok: true,
+          status: 200,
+          json: async () => invalidResp
+        });
+
+        const isOwner = await db.checkUserOwnerRole('test-uuid-coercion-check');
+        assert.strictEqual(isOwner, false, `Expected ${JSON.stringify(invalidResp)} to evaluate to false (no truthy coercion)`);
+        assert.strictEqual(loggedErrors.length, 0);
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  test('null or invalid user IDs: returns false immediately without making RPC call or logging', async () => {
+    let fetchCalled = false;
+    globalThis.fetch = async () => {
+      fetchCalled = true;
+      return { ok: true, status: 200, json: async () => true };
+    };
+
+    try {
+      const db = new DatabaseAdapter();
+      const invalidIds = [null, undefined, '', '   ', 12345, {}, []];
+
+      for (const id of invalidIds) {
+        fetchCalled = false;
+        const isOwner = await db.checkUserOwnerRole(id);
+        assert.strictEqual(isOwner, false, `Expected invalid ID ${JSON.stringify(id)} to return false`);
+        assert.strictEqual(fetchCalled, false, 'Fetch must not be called for invalid userId');
+        assert.strictEqual(loggedErrors.length, 0);
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  test('RPC errors (non-OK PostgREST response): logs OWNER_ROLE_QUERY_FAILED and returns false without leaking raw errors', async () => {
     const rawPostgrestMsg = 'SENSITIVE_INTERNAL_DATABASE_MESSAGE_THAT_MUST_NEVER_LEAK';
     globalThis.fetch = async () => ({
       ok: false,
       status: 401,
-      text: async () => JSON.stringify({ code: 'PGRST301', message: rawPostgrestMsg })
+      json: async () => ({ code: '42501', message: rawPostgrestMsg })
     });
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-3');
-      assert.equal(isOwner, false);
-      assert.equal(loggedErrors.length, 1);
-      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
-      assert.deepEqual(loggedErrors[0][1], {
+      const isOwner = await db.checkUserOwnerRole('test-uuid-error-1');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 1);
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepStrictEqual(loggedErrors[0][1], {
         status: 401,
-        code: 'PGRST301',
+        code: '42501',
         message: 'PostgREST owner-role request failed'
       });
-      // Confirm no raw error messages, user IDs, keys, or emails leaked in logged data
       const serialized = JSON.stringify(loggedErrors[0]);
       assert.ok(!serialized.includes(rawPostgrestMsg), 'Must never leak raw PostgREST message');
-      assert.ok(!serialized.includes('test-uuid-3'));
+      assert.ok(!serialized.includes('test-uuid-error-1'));
       assert.ok(!serialized.includes('Bearer'));
     } finally {
       restore();
     }
   });
 
-  test('malformed error response logs fixed error message and returns false', async () => {
+  test('malformed error response: logs UNKNOWN_ERROR with fixed message and returns false', async () => {
     globalThis.fetch = async () => ({
       ok: false,
       status: 502,
-      text: async () => '<html><body>Bad Gateway with sensitive secret 999</body></html>'
+      json: async () => {
+        throw new Error('Malformed non-JSON payload');
+      }
     });
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-4');
-      assert.equal(isOwner, false);
-      assert.equal(loggedErrors.length, 1);
-      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
-      assert.deepEqual(loggedErrors[0][1], {
+      const isOwner = await db.checkUserOwnerRole('test-uuid-error-2');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 1);
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepStrictEqual(loggedErrors[0][1], {
         status: 502,
         code: 'UNKNOWN_ERROR',
         message: 'PostgREST owner-role request failed'
       });
       const serialized = JSON.stringify(loggedErrors[0]);
-      assert.ok(!serialized.includes('test-uuid-4'));
-      assert.ok(!serialized.includes('<html>'));
-      assert.ok(!serialized.includes('999'));
+      assert.ok(!serialized.includes('test-uuid-error-2'));
+      assert.ok(!serialized.includes('Malformed'));
     } finally {
       restore();
     }
   });
 
-  test('network fetch error logs sanitized network message and returns false', async () => {
+  test('network fetch error: logs sanitized network message and returns false', async () => {
     const sensitiveNetworkMsg = 'connect ECONNREFUSED 192.168.1.1:5432 secret_internal_host';
     globalThis.fetch = async () => {
       throw new Error(sensitiveNetworkMsg);
@@ -462,18 +535,18 @@ describe('DatabaseAdapter.checkUserOwnerRole diagnostics and authorization', () 
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-5');
-      assert.equal(isOwner, false);
-      assert.equal(loggedErrors.length, 1);
-      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
-      assert.deepEqual(loggedErrors[0][1], {
+      const isOwner = await db.checkUserOwnerRole('test-uuid-network-error');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 1);
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepStrictEqual(loggedErrors[0][1], {
         status: 0,
         code: 'NETWORK_ERROR',
         message: 'Network fetch failed'
       });
       const serialized = JSON.stringify(loggedErrors[0]);
       assert.ok(!serialized.includes(sensitiveNetworkMsg), 'Must never leak raw network error message');
-      assert.ok(!serialized.includes('test-uuid-5'));
+      assert.ok(!serialized.includes('test-uuid-network-error'));
     } finally {
       restore();
     }
