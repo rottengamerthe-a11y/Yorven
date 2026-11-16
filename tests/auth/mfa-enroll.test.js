@@ -471,8 +471,8 @@ describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', 
     }
   });
 
-  test('RPC errors (non-OK PostgREST response): logs OWNER_ROLE_QUERY_FAILED and returns false without leaking raw errors', async () => {
-    const rawPostgrestMsg = 'SENSITIVE_INTERNAL_DATABASE_MESSAGE_THAT_MUST_NEVER_LEAK';
+  test('RPC errors: classifies schema permission failure as SCHEMA_PERMISSION_DENIED and logs host/rpc/code without leaking raw messages', async () => {
+    const rawPostgrestMsg = 'permission denied for schema auth_util (internal secret details 12345)';
     globalThis.fetch = async () => ({
       ok: false,
       status: 401,
@@ -481,25 +481,57 @@ describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', 
 
     try {
       const db = new DatabaseAdapter();
-      const isOwner = await db.checkUserOwnerRole('test-uuid-error-1');
+      const isOwner = await db.checkUserOwnerRole('test-uuid-error-schema');
       assert.strictEqual(isOwner, false);
       assert.strictEqual(loggedErrors.length, 1);
-      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_RPC_FAILED');
       assert.deepStrictEqual(loggedErrors[0][1], {
+        host: 'mock.supabase.co',
+        rpc: 'check_user_owner',
         status: 401,
         code: '42501',
-        message: 'PostgREST owner-role request failed'
+        classification: 'SCHEMA_PERMISSION_DENIED'
       });
       const serialized = JSON.stringify(loggedErrors[0]);
       assert.ok(!serialized.includes(rawPostgrestMsg), 'Must never leak raw PostgREST message');
-      assert.ok(!serialized.includes('test-uuid-error-1'));
+      assert.ok(!serialized.includes('test-uuid-error-schema'));
       assert.ok(!serialized.includes('Bearer'));
+      assert.ok(!serialized.includes('/rest/v1/rpc'));
     } finally {
       restore();
     }
   });
 
-  test('malformed error response: logs UNKNOWN_ERROR with fixed message and returns false', async () => {
+  test('RPC errors: classifies function execution failure as FUNCTION_PERMISSION_DENIED without leaking raw messages', async () => {
+    const rawPostgrestMsg = 'permission denied for function check_user_owner (internal detail secret 987)';
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ code: '42501', message: rawPostgrestMsg })
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-error-func');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 1);
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_RPC_FAILED');
+      assert.deepStrictEqual(loggedErrors[0][1], {
+        host: 'mock.supabase.co',
+        rpc: 'check_user_owner',
+        status: 401,
+        code: '42501',
+        classification: 'FUNCTION_PERMISSION_DENIED'
+      });
+      const serialized = JSON.stringify(loggedErrors[0]);
+      assert.ok(!serialized.includes(rawPostgrestMsg), 'Must never leak raw PostgREST message');
+      assert.ok(!serialized.includes('test-uuid-error-func'));
+    } finally {
+      restore();
+    }
+  });
+
+  test('malformed error response: classifies as UNKNOWN_ERROR and returns false', async () => {
     globalThis.fetch = async () => ({
       ok: false,
       status: 502,
@@ -513,11 +545,13 @@ describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', 
       const isOwner = await db.checkUserOwnerRole('test-uuid-error-2');
       assert.strictEqual(isOwner, false);
       assert.strictEqual(loggedErrors.length, 1);
-      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_RPC_FAILED');
       assert.deepStrictEqual(loggedErrors[0][1], {
+        host: 'mock.supabase.co',
+        rpc: 'check_user_owner',
         status: 502,
-        code: 'UNKNOWN_ERROR',
-        message: 'PostgREST owner-role request failed'
+        code: null,
+        classification: 'UNKNOWN_ERROR'
       });
       const serialized = JSON.stringify(loggedErrors[0]);
       assert.ok(!serialized.includes('test-uuid-error-2'));
@@ -527,7 +561,7 @@ describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', 
     }
   });
 
-  test('network fetch error: logs sanitized network message and returns false', async () => {
+  test('network fetch error: classifies as NETWORK_ERROR with status 0 and returns false', async () => {
     const sensitiveNetworkMsg = 'connect ECONNREFUSED 192.168.1.1:5432 secret_internal_host';
     globalThis.fetch = async () => {
       throw new Error(sensitiveNetworkMsg);
@@ -538,15 +572,41 @@ describe('DatabaseAdapter.checkUserOwnerRole RPC verification and diagnostics', 
       const isOwner = await db.checkUserOwnerRole('test-uuid-network-error');
       assert.strictEqual(isOwner, false);
       assert.strictEqual(loggedErrors.length, 1);
-      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_RPC_FAILED');
       assert.deepStrictEqual(loggedErrors[0][1], {
+        host: 'mock.supabase.co',
+        rpc: 'check_user_owner',
         status: 0,
-        code: 'NETWORK_ERROR',
-        message: 'Network fetch failed'
+        code: null,
+        classification: 'NETWORK_ERROR'
       });
       const serialized = JSON.stringify(loggedErrors[0]);
       assert.ok(!serialized.includes(sensitiveNetworkMsg), 'Must never leak raw network error message');
       assert.ok(!serialized.includes('test-uuid-network-error'));
+    } finally {
+      restore();
+    }
+  });
+
+  test('fallback to UNKNOWN_HOST when SUPABASE_URL is missing or malformed', async () => {
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({ code: 'XX000', message: 'Internal error' })
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      db.supabaseUrl = 'not-a-valid-url';
+      const isOwner = await db.checkUserOwnerRole('test-uuid-invalid-url');
+      assert.strictEqual(isOwner, false);
+      assert.strictEqual(loggedErrors.length, 1);
+      assert.strictEqual(loggedErrors[0][0], 'OWNER_ROLE_RPC_FAILED');
+      assert.strictEqual(loggedErrors[0][1].host, 'UNKNOWN_HOST');
+      assert.strictEqual(loggedErrors[0][1].rpc, 'check_user_owner');
+      assert.strictEqual(loggedErrors[0][1].status, 500);
+      assert.strictEqual(loggedErrors[0][1].code, 'XX000');
+      assert.strictEqual(loggedErrors[0][1].classification, 'UNKNOWN_ERROR');
     } finally {
       restore();
     }

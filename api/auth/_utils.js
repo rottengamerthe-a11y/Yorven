@@ -645,23 +645,51 @@ export class DatabaseAdapter {
       return false;
     }
 
+    const rpcName = 'check_user_owner';
     try {
-      const result = await this.callAuthUtilRpc('check_user_owner', {
+      const result = await this.callAuthUtilRpc(rpcName, {
         p_user_id: userId
       });
       return result === true;
     } catch (err) {
-      let code = undefined;
-      if (err?.data && typeof err.data === 'object' && typeof err.data.code === 'string') {
-        code = err.data.code;
-      } else if (!err?.status) {
-        code = 'NETWORK_ERROR';
+      let code = null;
+      let classification = null;
+
+      if (err?.data && typeof err.data === 'object') {
+        if (typeof err.data.code === 'string') {
+          code = err.data.code;
+        }
+        if (code === '42501') {
+          const rawMsg = typeof err.data.message === 'string' ? err.data.message.toLowerCase() : '';
+          if (rawMsg.includes('schema')) {
+            classification = 'SCHEMA_PERMISSION_DENIED';
+          } else if (rawMsg.includes('function')) {
+            classification = 'FUNCTION_PERMISSION_DENIED';
+          }
+        }
       }
 
-      console.error('OWNER_ROLE_QUERY_FAILED', {
+      if (!err?.status) {
+        classification = 'NETWORK_ERROR';
+      } else if (!classification) {
+        classification = 'UNKNOWN_ERROR';
+      }
+
+      let host = 'UNKNOWN_HOST';
+      try {
+        if (this.supabaseUrl) {
+          host = new URL(this.supabaseUrl).hostname || 'UNKNOWN_HOST';
+        }
+      } catch {
+        host = 'UNKNOWN_HOST';
+      }
+
+      console.error('OWNER_ROLE_RPC_FAILED', {
+        host,
+        rpc: rpcName,
         status: typeof err?.status === 'number' ? err.status : 0,
-        code: code || 'UNKNOWN_ERROR',
-        message: !err?.status ? 'Network fetch failed' : 'PostgREST owner-role request failed'
+        code,
+        classification
       });
       return false;
     }
