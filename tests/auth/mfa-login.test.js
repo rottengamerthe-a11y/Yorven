@@ -8,7 +8,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'mock-anon-key-12345';
 
 import { makeLoginHandler } from '../../api/auth/login.js';
-import { makeMfaVerifyHandler } from '../../api/auth/mfa-verify.js';
+import { makeMfaVerifyHandler, classifyJwtVerificationError } from '../../api/auth/mfa-verify.js';
 import {
   packMfaPayload,
   COOKIE_MFA_NAME,
@@ -1439,5 +1439,263 @@ describe('MFA Login Step 2 (Just-In-Time Challenge & Verification)', () => {
     assert.equal(cookieCleared, true);
     assert.equal(refreshSet, 'refresh-token-normal');
     assert.equal(logoutCalled, false, 'No logout on success');
+  });
+
+  test('classifyJwtVerificationError correctly maps known errors to whitelisted categories without leaking secrets', () => {
+    // Config errors
+    assert.equal(classifyJwtVerificationError(new Error('CONFIG_ERROR: SUPABASE_JWT_ALGORITHM must be explicitly set')), 'CONFIG_ERROR');
+    assert.equal(classifyJwtVerificationError(new Error('CONFIG_ERROR: Public key required for ES256 verification')), 'CONFIG_ERROR');
+    assert.equal(classifyJwtVerificationError(new Error('CONFIG_ERROR: SUPABASE_JWT_SECRET is missing or insufficient (min 32 chars)')), 'CONFIG_ERROR');
+    assert.equal(classifyJwtVerificationError(new Error('CONFIG_ERROR: SUPABASE_URL must be configured')), 'CONFIG_ERROR');
+
+    // Algorithm mismatch
+    assert.equal(classifyJwtVerificationError(new Error('JWT algorithm mismatch: expected ES256, got HS256')), 'ALGORITHM_MISMATCH');
+
+    // Signature / OpenSSL errors
+    assert.equal(classifyJwtVerificationError(new Error('Invalid JWT signature')), 'SIGNATURE_INVALID');
+    assert.equal(classifyJwtVerificationError(new Error('error:1E08010C:DECODER routines::unsupported')), 'SIGNATURE_INVALID');
+    assert.equal(classifyJwtVerificationError(new Error('error:0607A082:digital envelope routines:EVP_DigestVerifyInit:nested asn1 error')), 'SIGNATURE_INVALID');
+    assert.equal(classifyJwtVerificationError({ message: 'crypto error', code: 'ERR_CRYPTO_OPERATION_FAILED' }), 'SIGNATURE_INVALID');
+    assert.equal(classifyJwtVerificationError({ message: 'ossl error', code: 'ERR_OSSL_EVP_UNSUPPORTED_ALGORITHM' }), 'SIGNATURE_INVALID');
+
+    // Expiry
+    assert.equal(classifyJwtVerificationError(new Error('JWT token is expired')), 'TOKEN_EXPIRED');
+
+    // Claims
+    assert.equal(classifyJwtVerificationError(new Error('Invalid audience: expected authenticated, got anon')), 'AUDIENCE_MISMATCH');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid issuer: expected https://project.supabase.co/auth/v1, got https://other')), 'ISSUER_MISMATCH');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid or missing iss claim')), 'ISSUER_MISMATCH');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid AAL level: expected aal2, got aal1')), 'AAL_MISMATCH');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid or missing session_id claim')), 'SESSION_ID_INVALID');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid or missing sub claim')), 'SUB_INVALID');
+
+    // Malformed token
+    assert.equal(classifyJwtVerificationError(new Error('JWT token is required')), 'MALFORMED_TOKEN');
+    assert.equal(classifyJwtVerificationError(new Error('JWT must have 3 parts')), 'MALFORMED_TOKEN');
+    assert.equal(classifyJwtVerificationError(new Error('Invalid JWT encoding')), 'MALFORMED_TOKEN');
+    assert.equal(classifyJwtVerificationError(new Error('INVALID_CLAIMS_OBJECT')), 'MALFORMED_TOKEN');
+
+    // Unclassified / fallback
+    assert.equal(classifyJwtVerificationError(new Error('Some unexpected network failure')), 'VERIFICATION_FAILED');
+    assert.equal(classifyJwtVerificationError(new Error('unsupported feature')), 'VERIFICATION_FAILED');
+    assert.equal(classifyJwtVerificationError(new Error('hardware DECODER failure')), 'VERIFICATION_FAILED');
+    assert.equal(classifyJwtVerificationError(new Error('crypto service unavailable')), 'VERIFICATION_FAILED');
+    assert.equal(classifyJwtVerificationError(null), 'VERIFICATION_FAILED');
+    assert.equal(classifyJwtVerificationError({}), 'VERIFICATION_FAILED');
+  });
+
+  test('post-verification JWT verification failure logs sanitized category, revokes session, and preserves 403 INVALID_JWT_CLAIMS', async () => {
+    const origConsoleError = console.error;
+    const testCases = [
+      {
+        thrownError: new Error('Invalid JWT signature'),
+        expectedCategory: 'SIGNATURE_INVALID'
+      },
+      {
+        thrownError: new Error('CONFIG_ERROR: Public key required for ES256 verification'),
+        expectedCategory: 'CONFIG_ERROR'
+      },
+      {
+        thrownError: new Error('JWT algorithm mismatch: expected ES256, got HS256'),
+        expectedCategory: 'ALGORITHM_MISMATCH'
+      },
+      {
+        thrownError: new Error('Invalid issuer: expected https://ref.supabase.co/auth/v1, got https://other'),
+        expectedCategory: 'ISSUER_MISMATCH'
+      },
+      {
+        thrownError: new Error('Invalid AAL level: expected aal2, got aal1'),
+        expectedCategory: 'AAL_MISMATCH'
+      },
+      {
+        thrownError: new Error('Invalid or missing session_id claim'),
+        expectedCategory: 'SESSION_ID_INVALID'
+      }
+    ];
+
+    try {
+      for (const tc of testCases) {
+        const logs = [];
+        console.error = (...args) => logs.push(args);
+
+        let logoutCalledWith = null;
+        const mockGotrue = {
+          createFactorChallenge: async () => ({ ok: true, data: { id: 'cid-diag-jwt' } }),
+          verifyFactorChallenge: async () => ({
+            ok: true,
+            data: { access_token: 'aal2-token-diag', refresh_token: 'refresh-token-diag', expires_in: 3600 }
+          }),
+          logout: async (token, scope) => {
+            logoutCalledWith = { token, scope };
+            return { ok: true };
+          }
+        };
+
+        let cookieCleared = false;
+        let refreshSet = false;
+        let sessionCreated = false;
+
+        const mockDb = {
+          recordMfaChallengeConsumption: async () => true,
+          createDashboardSession: async () => { sessionCreated = true; }
+        };
+
+        const handler = makeMfaVerifyHandler({
+          getGoTrueClient: () => mockGotrue,
+          getDatabaseAdapter: () => mockDb,
+          clearMfaCookie: () => { cookieCleared = true; },
+          setRefreshCookie: () => { refreshSet = true; },
+          verifySupabaseJwt: async () => {
+            throw tc.thrownError;
+          }
+        });
+
+        const packed = makeMfaCookie();
+        const req = {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost:5173',
+            'x-requested-with': 'Yorven-Control',
+            cookie: `${COOKIE_MFA_NAME}=${packed}`
+          },
+          body: { code: '123456' }
+        };
+        const res = mockRes();
+
+        await handler(req, res);
+
+        assert.equal(res._status, 403);
+        assert.deepEqual(res._json, { error: 'INVALID_JWT_CLAIMS' });
+        assert.equal(cookieCleared, true);
+        assert.equal(refreshSet, false);
+        assert.equal(sessionCreated, false);
+        assert.deepEqual(logoutCalledWith, { token: 'aal2-token-diag', scope: 'local' });
+
+        const log = logs.find(l => l[0] === 'MFA_JWT_VERIFICATION_FAILED');
+        assert.ok(log, `Expected MFA_JWT_VERIFICATION_FAILED log for ${tc.expectedCategory}`);
+        assert.deepEqual(log[1], { category: tc.expectedCategory });
+
+        // Ensure raw exception message and secrets are NEVER logged
+        const loggedString = JSON.stringify(logs);
+        assert.equal(loggedString.includes(tc.thrownError.message), false, 'Raw exception message must never be logged');
+        assert.equal(loggedString.includes('aal2-token-diag'), false, 'Access token must never be logged');
+      }
+    } finally {
+      console.error = origConsoleError;
+    }
+  });
+
+  test('post-claims validation failure on session_id or exp logs diagnostic category, revokes session, and clears cookie', async () => {
+    const origConsoleError = console.error;
+
+    try {
+      // 1. Invalid session_id in claims
+      {
+        const logs = [];
+        console.error = (...args) => logs.push(args);
+
+        let logoutCalledWith = null;
+        let cookieCleared = false;
+        const mockGotrue = {
+          createFactorChallenge: async () => ({ ok: true, data: { id: 'cid-claims-sid' } }),
+          verifyFactorChallenge: async () => ({
+            ok: true,
+            data: { access_token: 'aal2-token-sid', refresh_token: 'refresh-token-sid', expires_in: 3600 }
+          }),
+          logout: async (token, scope) => {
+            logoutCalledWith = { token, scope };
+            return { ok: true };
+          }
+        };
+
+        const handler = makeMfaVerifyHandler({
+          getGoTrueClient: () => mockGotrue,
+          getDatabaseAdapter: () => ({ recordMfaChallengeConsumption: async () => true }),
+          clearMfaCookie: () => { cookieCleared = true; },
+          verifySupabaseJwt: async () => ({
+            sub: 'user-owner-123',
+            session_id: 'not-a-valid-uuid',
+            exp: Math.floor(Date.now() / 1000) + 3600
+          })
+        });
+
+        const req = {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost:5173',
+            'x-requested-with': 'Yorven-Control',
+            cookie: `${COOKIE_MFA_NAME}=${makeMfaCookie()}`
+          },
+          body: { code: '123456' }
+        };
+        const res = mockRes();
+
+        await handler(req, res);
+
+        assert.equal(res._status, 403);
+        assert.deepEqual(res._json, { error: 'INVALID_JWT_CLAIMS' });
+        assert.equal(cookieCleared, true);
+        assert.deepEqual(logoutCalledWith, { token: 'aal2-token-sid', scope: 'local' });
+
+        const log = logs.find(l => l[0] === 'MFA_JWT_VERIFICATION_FAILED');
+        assert.ok(log, 'Expected MFA_JWT_VERIFICATION_FAILED for invalid session_id');
+        assert.deepEqual(log[1], { category: 'SESSION_ID_INVALID' });
+      }
+
+      // 2. Non-numeric or invalid exp in claims
+      {
+        const logs = [];
+        console.error = (...args) => logs.push(args);
+
+        let logoutCalledWith = null;
+        let cookieCleared = false;
+        const mockGotrue = {
+          createFactorChallenge: async () => ({ ok: true, data: { id: 'cid-claims-exp' } }),
+          verifyFactorChallenge: async () => ({
+            ok: true,
+            data: { access_token: 'aal2-token-exp', refresh_token: 'refresh-token-exp', expires_in: 3600 }
+          }),
+          logout: async (token, scope) => {
+            logoutCalledWith = { token, scope };
+            return { ok: true };
+          }
+        };
+
+        const handler = makeMfaVerifyHandler({
+          getGoTrueClient: () => mockGotrue,
+          getDatabaseAdapter: () => ({ recordMfaChallengeConsumption: async () => true }),
+          clearMfaCookie: () => { cookieCleared = true; },
+          verifySupabaseJwt: async () => ({
+            sub: 'user-owner-123',
+            session_id: '12345678-1234-1234-1234-123456789abc',
+            exp: 0 // invalid exp
+          })
+        });
+
+        const req = {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost:5173',
+            'x-requested-with': 'Yorven-Control',
+            cookie: `${COOKIE_MFA_NAME}=${makeMfaCookie()}`
+          },
+          body: { code: '123456' }
+        };
+        const res = mockRes();
+
+        await handler(req, res);
+
+        assert.equal(res._status, 403);
+        assert.deepEqual(res._json, { error: 'INVALID_JWT_CLAIMS' });
+        assert.equal(cookieCleared, true);
+        assert.deepEqual(logoutCalledWith, { token: 'aal2-token-exp', scope: 'local' });
+
+        const log = logs.find(l => l[0] === 'MFA_JWT_VERIFICATION_FAILED');
+        assert.ok(log, 'Expected MFA_JWT_VERIFICATION_FAILED for invalid exp');
+        assert.deepEqual(log[1], { category: 'TOKEN_EXPIRED' });
+      }
+    } finally {
+      console.error = origConsoleError;
+    }
   });
 });

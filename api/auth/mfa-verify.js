@@ -24,6 +24,57 @@ import {
   getDatabaseAdapter
 } from './_utils.js';
 
+const OPENSSL_ERROR_REGEX = /^error:[0-9a-fA-F]+:/;
+
+/**
+ * Classifies JWT verification errors into stable, sanitized diagnostic categories.
+ * Never exposes raw tokens, secrets, or unbounded error messages.
+ */
+export function classifyJwtVerificationError(err) {
+  const msg = typeof err?.message === 'string' ? err.message : '';
+  if (msg.startsWith('CONFIG_ERROR')) {
+    return 'CONFIG_ERROR';
+  }
+  if (msg.startsWith('JWT algorithm mismatch')) {
+    return 'ALGORITHM_MISMATCH';
+  }
+  if (
+    msg === 'Invalid JWT signature' ||
+    OPENSSL_ERROR_REGEX.test(msg) ||
+    err?.code?.startsWith?.('ERR_CRYPTO') ||
+    err?.code?.startsWith?.('ERR_OSSL_')
+  ) {
+    return 'SIGNATURE_INVALID';
+  }
+  if (msg === 'JWT token is expired') {
+    return 'TOKEN_EXPIRED';
+  }
+  if (msg.startsWith('Invalid audience')) {
+    return 'AUDIENCE_MISMATCH';
+  }
+  if (msg.startsWith('Invalid issuer') || msg.startsWith('Invalid or missing iss claim')) {
+    return 'ISSUER_MISMATCH';
+  }
+  if (msg.startsWith('Invalid AAL level')) {
+    return 'AAL_MISMATCH';
+  }
+  if (msg.startsWith('Invalid or missing session_id claim')) {
+    return 'SESSION_ID_INVALID';
+  }
+  if (msg.startsWith('Invalid or missing sub claim')) {
+    return 'SUB_INVALID';
+  }
+  if (
+    msg === 'JWT token is required' ||
+    msg === 'JWT must have 3 parts' ||
+    msg === 'Invalid JWT encoding' ||
+    msg === 'INVALID_CLAIMS_OBJECT'
+  ) {
+    return 'MALFORMED_TOKEN';
+  }
+  return 'VERIFICATION_FAILED';
+}
+
 export function makeMfaVerifyHandler({
   getGoTrueClient: getGoTrue = getGoTrueClient,
   getDatabaseAdapter: getDb = getDatabaseAdapter,
@@ -234,7 +285,9 @@ export function makeMfaVerifyHandler({
       if (!claims || typeof claims !== 'object') {
         throw new Error('INVALID_CLAIMS_OBJECT');
       }
-    } catch {
+    } catch (err) {
+      const category = classifyJwtVerificationError(err);
+      console.error('MFA_JWT_VERIFICATION_FAILED', { category });
       await revokeAal2Session();
       safeClearMfa();
       return res.status(403).json({ error: 'INVALID_JWT_CLAIMS' });
@@ -248,12 +301,14 @@ export function makeMfaVerifyHandler({
 
     const sessionId = claims.session_id;
     if (!sessionId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) {
+      console.error('MFA_JWT_VERIFICATION_FAILED', { category: 'SESSION_ID_INVALID' });
       await revokeAal2Session();
       safeClearMfa();
       return res.status(403).json({ error: 'INVALID_JWT_CLAIMS' });
     }
 
     if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp) || claims.exp <= 0) {
+      console.error('MFA_JWT_VERIFICATION_FAILED', { category: 'TOKEN_EXPIRED' });
       await revokeAal2Session();
       safeClearMfa();
       return res.status(403).json({ error: 'INVALID_JWT_CLAIMS' });
