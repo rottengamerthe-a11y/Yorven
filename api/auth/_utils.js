@@ -641,13 +641,41 @@ export class DatabaseAdapter {
   }
 
   async checkUserOwnerRole(userId) {
-    const res = await fetch(`${this.supabaseUrl}/rest/v1/user_roles?user_id=eq.${userId}&select=role`, {
-      method: 'GET',
-      headers: this.getPostgrestHeaders('public')
-    });
-    if (!res.ok) {
+    let res;
+    try {
+      res = await fetch(`${this.supabaseUrl}/rest/v1/user_roles?user_id=eq.${userId}&select=role`, {
+        method: 'GET',
+        headers: this.getPostgrestHeaders('public')
+      });
+    } catch {
+      console.error('OWNER_ROLE_QUERY_FAILED', {
+        status: 0,
+        code: 'NETWORK_ERROR',
+        message: 'Network fetch failed'
+      });
       return false;
     }
+
+    if (!res.ok) {
+      let code = undefined;
+      try {
+        const text = await res.text();
+        const data = JSON.parse(text);
+        if (data && typeof data === 'object' && typeof data.code === 'string') {
+          code = data.code;
+        }
+      } catch {
+        // Ignore parse error; code remains undefined
+      }
+
+      console.error('OWNER_ROLE_QUERY_FAILED', {
+        status: res.status,
+        code: code || 'UNKNOWN_ERROR',
+        message: 'PostgREST owner-role request failed'
+      });
+      return false;
+    }
+
     const rows = await res.json().catch(() => []);
     return Array.isArray(rows) && rows.length > 0 && rows[0].role === 'owner';
   }

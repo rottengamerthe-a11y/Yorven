@@ -9,7 +9,7 @@ import {
   makeEnrollVerifyHandler,
   makeConsolidatedHandler
 } from '../../api/auth/mfa-enroll.js';
-import { packMfaPayload, COOKIE_ENROLL_NAME } from '../../api/auth/_utils.js';
+import { packMfaPayload, COOKIE_ENROLL_NAME, DatabaseAdapter } from '../../api/auth/_utils.js';
 
 // Helper to create a mock response object capturing status, json payload and headers
 function mockRes() {
@@ -344,3 +344,139 @@ describe('Consolidated MFA Handler & Vercel Rewrites', () => {
     );
   });
 });
+
+describe('DatabaseAdapter.checkUserOwnerRole diagnostics and authorization', () => {
+  let originalFetch;
+  let originalConsoleError;
+  let loggedErrors;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    originalConsoleError = console.error;
+    loggedErrors = [];
+    console.error = (...args) => {
+      loggedErrors.push(args);
+    };
+  });
+
+  function restore() {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
+
+  test('successful owner row returns true without error logging', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [{ role: 'owner' }]
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-1');
+      assert.equal(isOwner, true);
+      assert.equal(loggedErrors.length, 0);
+    } finally {
+      restore();
+    }
+  });
+
+  test('successful empty result returns false without error logging', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => []
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-2');
+      assert.equal(isOwner, false);
+      assert.equal(loggedErrors.length, 0);
+    } finally {
+      restore();
+    }
+  });
+
+  test('non-OK PostgREST response logs OWNER_ROLE_QUERY_FAILED and returns false', async () => {
+    const rawPostgrestMsg = 'SENSITIVE_INTERNAL_DATABASE_MESSAGE_THAT_MUST_NEVER_LEAK';
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 401,
+      text: async () => JSON.stringify({ code: 'PGRST301', message: rawPostgrestMsg })
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-3');
+      assert.equal(isOwner, false);
+      assert.equal(loggedErrors.length, 1);
+      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepEqual(loggedErrors[0][1], {
+        status: 401,
+        code: 'PGRST301',
+        message: 'PostgREST owner-role request failed'
+      });
+      // Confirm no raw error messages, user IDs, keys, or emails leaked in logged data
+      const serialized = JSON.stringify(loggedErrors[0]);
+      assert.ok(!serialized.includes(rawPostgrestMsg), 'Must never leak raw PostgREST message');
+      assert.ok(!serialized.includes('test-uuid-3'));
+      assert.ok(!serialized.includes('Bearer'));
+    } finally {
+      restore();
+    }
+  });
+
+  test('malformed error response logs fixed error message and returns false', async () => {
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 502,
+      text: async () => '<html><body>Bad Gateway with sensitive secret 999</body></html>'
+    });
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-4');
+      assert.equal(isOwner, false);
+      assert.equal(loggedErrors.length, 1);
+      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepEqual(loggedErrors[0][1], {
+        status: 502,
+        code: 'UNKNOWN_ERROR',
+        message: 'PostgREST owner-role request failed'
+      });
+      const serialized = JSON.stringify(loggedErrors[0]);
+      assert.ok(!serialized.includes('test-uuid-4'));
+      assert.ok(!serialized.includes('<html>'));
+      assert.ok(!serialized.includes('999'));
+    } finally {
+      restore();
+    }
+  });
+
+  test('network fetch error logs sanitized network message and returns false', async () => {
+    const sensitiveNetworkMsg = 'connect ECONNREFUSED 192.168.1.1:5432 secret_internal_host';
+    globalThis.fetch = async () => {
+      throw new Error(sensitiveNetworkMsg);
+    };
+
+    try {
+      const db = new DatabaseAdapter();
+      const isOwner = await db.checkUserOwnerRole('test-uuid-5');
+      assert.equal(isOwner, false);
+      assert.equal(loggedErrors.length, 1);
+      assert.equal(loggedErrors[0][0], 'OWNER_ROLE_QUERY_FAILED');
+      assert.deepEqual(loggedErrors[0][1], {
+        status: 0,
+        code: 'NETWORK_ERROR',
+        message: 'Network fetch failed'
+      });
+      const serialized = JSON.stringify(loggedErrors[0]);
+      assert.ok(!serialized.includes(sensitiveNetworkMsg), 'Must never leak raw network error message');
+      assert.ok(!serialized.includes('test-uuid-5'));
+    } finally {
+      restore();
+    }
+  });
+});
+
