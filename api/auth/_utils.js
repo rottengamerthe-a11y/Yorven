@@ -12,7 +12,35 @@ import cookie from 'cookie';
 // ----------------------------------------------------------------------------
 
 export const COOKIE_REFRESH_NAME = '__Host-yorven-refresh';
+export const COOKIE_ENROLL_NAME = '__Host-yorven-enroll';
 export const COOKIE_MFA_NAME = '__Host-yorven-mfa';
+
+
+
+export function setEnrollCookie(res, encryptedPayload) {
+  const serialized = cookie.serialize(COOKIE_ENROLL_NAME, encryptedPayload, {
+    httpOnly: true,
+    // Secure flag only in production to allow HTTP localhost during development
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: MFA_COOKIE_MAX_AGE,
+    priority: 'high'
+  });
+  appendCookie(res, serialized);
+}
+
+export function clearEnrollCookie(res) {
+  const serialized = cookie.serialize(COOKIE_ENROLL_NAME, '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 0
+  });
+  appendCookie(res, serialized);
+}
+
 
 export const REFRESH_COOKIE_MAX_AGE = 7776000; // 90 days in seconds
 export const MFA_COOKIE_MAX_AGE = 300; // 5 minutes in seconds
@@ -156,6 +184,7 @@ export function clearRefreshCookie(res) {
 export function setMfaCookie(res, encryptedPayload) {
   const serialized = cookie.serialize(COOKIE_MFA_NAME, encryptedPayload, {
     httpOnly: true,
+    // Secure flag only in production to allow HTTP localhost during development
     secure: true,
     sameSite: 'strict',
     path: '/',
@@ -233,7 +262,11 @@ export function encryptAesGcm(plainText, secret = process.env.AUTH_SECRET) {
 /**
  * Decrypts AES-256-GCM ciphertext.
  */
+// Decrypts AES-256-GCM ciphertext.
 export function decryptAesGcm(encryptedHex, ivHex, authTagHex, secret = process.env.AUTH_SECRET) {
+  if (!secret) {
+    throw new Error('CONFIG_ERROR: AUTH_SECRET not configured');
+  }
   const key = derive32ByteKey(secret);
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
   decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
@@ -385,6 +418,18 @@ export async function verifySupabaseJwt(token, options = {}) {
 // ----------------------------------------------------------------------------
 
 export class GoTrueClient {
+  // Delete an existing MFA factor (e.g., unverified TOTP)
+  async deleteFactor(factorId, aal1AccessToken) {
+    const res = await fetch(`${this.baseUrl}/auth/v1/factors/${factorId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders({
+        Authorization: `Bearer ${aal1AccessToken}`
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, ok: res.ok, data };
+  }
+
   constructor(baseUrl, anonKey) {
     this.baseUrl = (baseUrl || process.env.SUPABASE_URL || '').replace(/\/+$/, '');
     this.anonKey = anonKey || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -415,6 +460,22 @@ export class GoTrueClient {
     });
     const data = await res.json().catch(() => ({}));
     return { status: res.status, ok: res.ok, data: Array.isArray(data?.factors) ? data.factors : data };
+  }
+
+     async createFactor(factorType, aal1AccessToken, extra = {}) {
+    const res = await fetch(`${this.baseUrl}/auth/v1/factors`, {
+      method: 'POST',
+      headers: this.getHeaders({
+        Authorization: `Bearer ${aal1AccessToken}`
+      }),
+      body: JSON.stringify({
+  factor_type: factorType,
+  ...extra
+})
+    });
+
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, ok: res.ok, data };
   }
 
   async createFactorChallenge(factorId, aal1AccessToken) {
