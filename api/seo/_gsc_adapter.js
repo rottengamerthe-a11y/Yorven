@@ -22,19 +22,37 @@ export const YORVEN_MONITORED_PATHS = new Set([
 ]);
 
 /**
- * Normalizes a GSC page URL into a local path matching seo_pages.path.
- * Discards unmonitored routes or invalid URLs.
+ * Normalizes a GSC page URL into a local path matching an allowed route in allowedRoutes.
+ * Strict rules:
+ * - Reject non-Yorven origins.
+ * - Safely decode URI components.
+ * - Normalize case and trailing slashes.
+ * - Match exactly against the dynamic route registry (allowedRoutes: Map, Set, or Array).
+ * - Reject unmonitored routes, unknown routes, or malformed URLs.
+ * - Fail closed if no allowedRoutes registry is provided.
  */
-export function normalizeGscPagePath(rawUrl) {
+export function normalizeGscPagePath(rawUrl, allowedRoutes) {
   if (!rawUrl || typeof rawUrl !== 'string') return null;
+  if (!allowedRoutes) return null;
   try {
     const parsed = new URL(rawUrl, 'https://yorven.in');
-    let pathname = parsed.pathname.trim().toLowerCase();
-    if (pathname.length > 1 && pathname.endsWith('/')) {
-      pathname = pathname.slice(0, -1);
+    if (parsed.origin !== 'https://yorven.in') {
+      return null;
     }
-    const cleanPath = pathname || '/';
-    return YORVEN_MONITORED_PATHS.has(cleanPath) ? cleanPath : null;
+    if (parsed.username || parsed.password) {
+      return null;
+    }
+    let decoded = decodeURIComponent(parsed.pathname).trim().toLowerCase();
+    if (decoded.length > 1 && decoded.endsWith('/')) {
+      decoded = decoded.slice(0, -1);
+    }
+    const cleanPath = decoded || '/';
+    const isAllowed = allowedRoutes instanceof Set || allowedRoutes instanceof Map
+      ? allowedRoutes.has(cleanPath)
+      : Array.isArray(allowedRoutes)
+        ? allowedRoutes.includes(cleanPath)
+        : false;
+    return isAllowed ? cleanPath : null;
   } catch {
     return null;
   }
@@ -44,10 +62,12 @@ export function normalizeGscPagePath(rawUrl) {
  * Sanitizes and validates GSC metric row values according to database column constraints.
  */
 export function sanitizeGscRow(row, pageIdMap) {
-  const pagePath = normalizeGscPagePath(row.page || (Array.isArray(row.keys) ? row.keys[1] : null));
+  if (!row || !pageIdMap) return null;
+  const rawTarget = row.page || (Array.isArray(row.keys) ? row.keys[1] : null);
+  const pagePath = normalizeGscPagePath(rawTarget, pageIdMap);
   if (!pagePath) return null;
 
-  const pageId = pageIdMap.get(pagePath);
+  const pageId = pageIdMap instanceof Map ? pageIdMap.get(pagePath) : null;
   if (!pageId) return null;
 
   const rawDate = row.date || (Array.isArray(row.keys) ? row.keys[0] : null);
@@ -120,6 +140,11 @@ export async function fetchGscSearchAnalytics({
   const maxRetries = isManual ? 0 : 3;
 
   const siteUrl = process.env.GSC_SITE_URL || 'https://yorven.in/';
+
+  // Validate route registry upfront
+  if (!pageIdMap || !(pageIdMap instanceof Map) || pageIdMap.size === 0) {
+    throw new Error('CONFIG_ERROR: Valid non-empty pageIdMap route registry is required');
+  }
 
   // If using custom mock fetcher, allow running without real Google credentials
   if (!customGscFetcher) {

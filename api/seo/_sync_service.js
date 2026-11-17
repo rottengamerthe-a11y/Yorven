@@ -70,8 +70,18 @@ export async function insertSyncLog(db, jobId, level, message, payload = null) {
   }
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CONTROL_CHARS_REGEX = /[\x00-\x1f\x7f\s]/;
+
 /**
  * Loads all monitored routes from public.seo_pages.
+ * Validates every record strictly:
+ * - Reject non-object rows.
+ * - Require valid UUID in id.
+ * - Require valid absolute path starting with '/'.
+ * - Reject whitespace-only paths, control characters, queries, fragments, or backslashes.
+ * - Normalize paths consistently and reject duplicate normalized paths.
+ * - Fails closed if any row is malformed or incomplete.
  * Returns { pageIdMap: Map<path, id>, pages: Array<page> }
  */
 export async function loadMonitoredPages(db) {
@@ -85,9 +95,47 @@ export async function loadMonitoredPages(db) {
   }
 
   const pages = await res.json();
+  if (!Array.isArray(pages) || pages.length === 0) {
+    throw new Error('Failed to load monitored pages: Route registry is empty or invalid');
+  }
+
   const pageIdMap = new Map();
   for (const page of pages) {
-    pageIdMap.set(page.path, page.id);
+    if (!page || typeof page !== 'object' || Array.isArray(page)) {
+      throw new Error('Failed to load monitored pages: Malformed row in registry');
+    }
+    if (typeof page.id !== 'string' || !UUID_REGEX.test(page.id)) {
+      throw new Error(`Failed to load monitored pages: Invalid UUID in registry: ${page.id}`);
+    }
+    if (typeof page.path !== 'string') {
+      throw new Error(`Failed to load monitored pages: Non-string path for ID ${page.id}`);
+    }
+    const rawPath = page.path.trim();
+    if (rawPath.length === 0 || !rawPath.startsWith('/')) {
+      throw new Error(`Failed to load monitored pages: Path must be non-empty and start with "/": ${page.path}`);
+    }
+    if (CONTROL_CHARS_REGEX.test(page.path)) {
+      throw new Error(`Failed to load monitored pages: Path contains whitespace or control characters: ${page.path}`);
+    }
+    if (page.path.includes('?') || page.path.includes('#') || page.path.includes('\\')) {
+      throw new Error(`Failed to load monitored pages: Path contains query, fragment, or backslash: ${page.path}`);
+    }
+
+    let normalized = rawPath.toLowerCase();
+    if (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.slice(0, -1);
+    }
+    const cleanPath = normalized || '/';
+
+    if (pageIdMap.has(cleanPath)) {
+      throw new Error(`Failed to load monitored pages: Duplicate route detected in registry: ${cleanPath}`);
+    }
+
+    pageIdMap.set(cleanPath, page.id);
+  }
+
+  if (pageIdMap.size === 0) {
+    throw new Error('Failed to load monitored pages: No valid routes found in registry');
   }
 
   return { pageIdMap, pages };
@@ -243,7 +291,32 @@ export async function executeClaimedSyncWorkload({
   let ga4Error = null;
 
   // 1. Load monitored pages
-  const { pageIdMap } = await loadMonitoredPages(db);
+  let pageIdMap;
+  try {
+    const loaded = await loadMonitoredPages(db);
+    pageIdMap = loaded.pageIdMap;
+  } catch (err) {
+    const durationMs = Date.now() - startTime;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', err.message);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: jobType,
+      phase: 'registry_load',
+      duration_ms: durationMs,
+      error: err.message,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType,
+      durationMs,
+      error: `Failed to load route registry: ${err.message}`,
+      gscPersistedRows: 0,
+      ga4PersistedRows: 0,
+      gscTruncationStatus: 'not_applicable'
+    };
+  }
   const { gscDate, ga4Date } = getDefaultSyncDates();
 
   const shouldRunGsc = jobType === 'gsc_daily' || jobType === 'full_resync';

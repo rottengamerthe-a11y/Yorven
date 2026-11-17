@@ -57,6 +57,25 @@ export function validateDateRange(startDateStr, endDateStr) {
   return { valid: true, inclusiveDays, startUtc, endUtc };
 }
 
+export async function fetchMonitoredRoutesCount(db) {
+  const pagesUrl = `${db.supabaseUrl}/rest/v1/seo_pages?select=id`;
+  const pagesRes = await fetch(pagesUrl, { headers: db.getPostgrestHeaders('public') });
+  if (!pagesRes.ok) {
+    const err = new Error(`Failed to load route registry from database: HTTP ${pagesRes.status}`);
+    err.code = 'ROUTE_REGISTRY_ERROR';
+    err.status = 502;
+    throw err;
+  }
+  const pagesRows = await pagesRes.json();
+  if (!Array.isArray(pagesRows) || pagesRows.length === 0) {
+    const err = new Error('Route registry is empty or invalid');
+    err.code = 'ROUTE_REGISTRY_ERROR';
+    err.status = 502;
+    throw err;
+  }
+  return pagesRows.length;
+}
+
 export default async function handler(req, res) {
   setSeoSecurityHeaders(res);
 
@@ -91,6 +110,17 @@ export default async function handler(req, res) {
   const db = getDatabaseAdapter();
 
   try {
+    // 0. Fetch registered monitored routes from seo_pages
+    let monitoredRoutesCount;
+    try {
+      monitoredRoutesCount = await fetchMonitoredRoutesCount(db);
+    } catch (regErr) {
+      return res.status(regErr.status || 502).json({
+        error: regErr.code || 'ROUTE_REGISTRY_ERROR',
+        message: regErr.message
+      });
+    }
+
     // 1. Fetch GSC metrics for date range
     const gscUrl = `${db.supabaseUrl}/rest/v1/seo_search_console_metrics?metric_date=gte.${startDate}&metric_date=lte.${endDate}&select=clicks,impressions,ctr,position`;
     const gscRes = await fetch(gscUrl, { headers: db.getPostgrestHeaders('public') });
@@ -176,9 +206,9 @@ export default async function handler(req, res) {
         avg_session_duration_seconds: aggregateDuration,
         conversions: totalConversions
       },
-      monitored_routes_count: 9,
+      monitored_routes_count: monitoredRoutesCount,
       disclaimers: {
-        scope_note: "Sessions represent organic visits landing on one of Yorven's 9 monitored routes. Active users represent the sum of daily landing users and is not cross-day de-duplicated."
+        scope_note: `Sessions represent organic visits landing on one of Yorven's ${monitoredRoutesCount} monitored routes. Active users represent the sum of daily landing users and is not cross-day de-duplicated.`
       }
     });
   } catch (err) {

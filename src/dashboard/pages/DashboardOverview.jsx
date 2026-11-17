@@ -59,8 +59,7 @@ export function DashboardOverview() {
     loadOverview(datePreset);
   }, [datePreset, loadOverview]);
 
-  const gsc = overviewData?.gsc || {};
-  const ga4 = overviewData?.ga4 || {};
+  const metrics = overviewData?.metrics || {};
   const dateRange = overviewData?.date_range || {};
 
   return (
@@ -107,9 +106,9 @@ export function DashboardOverview() {
       </div>
 
       {/* Date Window Indicator */}
-      {dateRange.start && (
+      {dateRange.startDate && (
         <div style={{ marginBottom: '20px', fontSize: '12px', color: '#9cb5af', fontFamily: 'var(--mono, monospace)' }}>
-          Active Window: {dateRange.start} → {dateRange.end} ({dateRange.inclusive_days} inclusive days)
+          Active Window: {dateRange.startDate} → {dateRange.endDate} ({dateRange.inclusive_days} inclusive days)
         </div>
       )}
 
@@ -145,7 +144,7 @@ export function DashboardOverview() {
         <div className="metrics-grid-4">
           <MetricCard
             title="Organic Clicks"
-            value={gsc.total_clicks}
+            value={metrics.clicks}
             subtitle="Search visits to monitored routes"
             icon={Search}
             isLoading={isLoading}
@@ -153,7 +152,7 @@ export function DashboardOverview() {
 
           <MetricCard
             title="Impressions"
-            value={gsc.total_impressions}
+            value={metrics.impressions}
             subtitle="Search appearances on Google SERP"
             icon={Eye}
             isLoading={isLoading}
@@ -162,8 +161,8 @@ export function DashboardOverview() {
           <MetricCard
             title="Average CTR"
             formattedValue={
-              gsc.aggregate_ctr !== undefined && gsc.aggregate_ctr !== null
-                ? `${(Number(gsc.aggregate_ctr) * 100).toFixed(2)}%`
+              metrics.ctr !== undefined && metrics.ctr !== null
+                ? `${(Number(metrics.ctr) * 100).toFixed(2)}%`
                 : null
             }
             subtitle="Clicks ÷ Impressions weighted"
@@ -174,8 +173,8 @@ export function DashboardOverview() {
           <MetricCard
             title="Average Position"
             formattedValue={
-              gsc.aggregate_position !== undefined && gsc.aggregate_position !== null
-                ? Number(gsc.aggregate_position).toFixed(1)
+              metrics.avg_position !== undefined && metrics.avg_position !== null
+                ? Number(metrics.avg_position).toFixed(1)
                 : null
             }
             subtitle="Impression-weighted SERP rank"
@@ -198,7 +197,7 @@ export function DashboardOverview() {
         <div className="metrics-grid-4">
           <MetricCard
             title="Organic Sessions"
-            value={ga4.total_sessions}
+            value={metrics.monitored_route_organic_landing_sessions}
             subtitle="Direct landing page sessions"
             icon={Users}
             isLoading={isLoading}
@@ -206,7 +205,7 @@ export function DashboardOverview() {
 
           <MetricCard
             title="Active Users (Sum)"
-            value={ga4.total_active_users_sum_non_deduplicated}
+            value={metrics.aggregate_daily_active_users}
             subtitle="Cross-day sum"
             disclaimer="Notice: Non-deduplicated daily sum across monitored routes"
             icon={Users}
@@ -216,8 +215,8 @@ export function DashboardOverview() {
           <MetricCard
             title="Engagement Rate"
             formattedValue={
-              ga4.aggregate_engagement_rate !== undefined && ga4.aggregate_engagement_rate !== null
-                ? `${(Number(ga4.aggregate_engagement_rate) * 100).toFixed(1)}%`
+              metrics.engagement_rate !== undefined && metrics.engagement_rate !== null
+                ? `${(Number(metrics.engagement_rate) * 100).toFixed(1)}%`
                 : null
             }
             subtitle="Session-weighted engaged time"
@@ -228,8 +227,8 @@ export function DashboardOverview() {
           <MetricCard
             title="Bounce Rate"
             formattedValue={
-              ga4.aggregate_bounce_rate !== undefined && ga4.aggregate_bounce_rate !== null
-                ? `${(Number(ga4.aggregate_bounce_rate) * 100).toFixed(1)}%`
+              metrics.bounce_rate !== undefined && metrics.bounce_rate !== null
+                ? `${(Number(metrics.bounce_rate) * 100).toFixed(1)}%`
                 : null
             }
             subtitle="Non-engaged sessions ratio"
@@ -242,8 +241,8 @@ export function DashboardOverview() {
           <MetricCard
             title="Avg Session Duration"
             formattedValue={
-              ga4.avg_session_duration_seconds !== undefined && ga4.avg_session_duration_seconds !== null
-                ? `${Math.round(Number(ga4.avg_session_duration_seconds))}s`
+              metrics.avg_session_duration_seconds !== undefined && metrics.avg_session_duration_seconds !== null
+                ? `${Math.round(Number(metrics.avg_session_duration_seconds))}s`
                 : null
             }
             subtitle="Average active dwell time per session"
@@ -253,11 +252,11 @@ export function DashboardOverview() {
 
           <MetricCard
             title="Goal Conversions"
-            value={ga4.total_conversions}
+            value={metrics.conversions}
             subtitle="Lead bookings and form completions"
             icon={Target}
-            badge={ga4.total_conversions > 0 ? 'Converting' : 'Baseline'}
-            badgeType={ga4.total_conversions > 0 ? 'success' : 'default'}
+            badge={metrics.conversions > 0 ? 'Converting' : 'Baseline'}
+            badgeType={metrics.conversions > 0 ? 'success' : 'default'}
             isLoading={isLoading}
           />
         </div>

@@ -4,7 +4,6 @@
  * Follows Frozen Architecture (Revision 11 Final) strictly.
  */
 
-import { YORVEN_MONITORED_PATHS } from './_gsc_adapter.js';
 import { getGoogleAccessToken } from './_google_auth.js';
 
 export const GA4_OAUTH_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
@@ -18,34 +17,38 @@ export const ALLOWED_GA4_ORIGINS = new Set([
  * Strict rules:
  * - Reject absolute URLs whose origin is NOT a Yorven origin.
  * - Strip query strings and hash fragments.
+ * - Safely decode URI components.
  * - Normalize case and trailing slashes.
- * - Match against the 9 monitored routes; discard unknown routes, 404s, or (not set).
+ * - Match against the dynamic route registry (allowedRoutes: Map, Set, or Array).
+ * - Reject unknown routes, 404s, unmonitored routes, or (not set).
+ * - Fail closed if no allowedRoutes registry is provided.
  */
-export function normalizeGa4LandingPath(rawPath) {
+export function normalizeGa4LandingPath(rawPath, allowedRoutes) {
   if (!rawPath || typeof rawPath !== 'string') return null;
+  if (!allowedRoutes) return null;
   const trimmed = rawPath.trim();
   if (!trimmed || trimmed === '(not set)') return null;
 
   try {
-    let pathname;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      const parsed = new URL(trimmed);
-      if (!ALLOWED_GA4_ORIGINS.has(parsed.origin.toLowerCase())) {
-        return null; // Reject non-Yorven origins
-      }
-      pathname = parsed.pathname;
-    } else {
-      // Relative path
-      const parsed = new URL(trimmed.startsWith('/') ? trimmed : `/${trimmed}`, 'https://yorven.in');
-      pathname = parsed.pathname;
+    const parsed = new URL(trimmed, 'https://yorven.in');
+    if (!ALLOWED_GA4_ORIGINS.has(parsed.origin.toLowerCase())) {
+      return null; // Reject non-Yorven origins, protocol-relative, and authority confusion
+    }
+    if (parsed.username || parsed.password) {
+      return null; // Reject URLs with embedded credentials
     }
 
-    let normalized = pathname.trim().toLowerCase();
-    if (normalized.length > 1 && normalized.endsWith('/')) {
-      normalized = normalized.slice(0, -1);
+    let decoded = decodeURIComponent(parsed.pathname).trim().toLowerCase();
+    if (decoded.length > 1 && decoded.endsWith('/')) {
+      decoded = decoded.slice(0, -1);
     }
-    const cleanPath = normalized || '/';
-    return YORVEN_MONITORED_PATHS.has(cleanPath) ? cleanPath : null;
+    const cleanPath = decoded || '/';
+    const isAllowed = allowedRoutes instanceof Set || allowedRoutes instanceof Map
+      ? allowedRoutes.has(cleanPath)
+      : Array.isArray(allowedRoutes)
+        ? allowedRoutes.includes(cleanPath)
+        : false;
+    return isAllowed ? cleanPath : null;
   } catch {
     return null;
   }
@@ -136,6 +139,11 @@ export async function fetchGa4Metrics({
 
   // Validate GA4 property ID upfront
   const propertyId = validateGa4PropertyId(process.env.GA4_PROPERTY_ID);
+
+  // Validate route registry upfront
+  if (!pageIdMap || !(pageIdMap instanceof Map) || pageIdMap.size === 0) {
+    throw new Error('CONFIG_ERROR: Valid non-empty pageIdMap route registry is required');
+  }
 
   // If using custom mock fetcher, allow running without real Google credentials
   if (!customGa4Fetcher) {
@@ -280,7 +288,7 @@ export async function fetchGa4Metrics({
     if (!metricDate) continue;
 
     const rawLanding = rawRow.dimensionValues[1]?.value;
-    const cleanPath = normalizeGa4LandingPath(rawLanding);
+    const cleanPath = normalizeGa4LandingPath(rawLanding, pageIdMap);
     if (!cleanPath) continue;
 
     const pageId = pageIdMap.get(cleanPath);
