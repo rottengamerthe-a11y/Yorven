@@ -1,8 +1,14 @@
 /**
- * GET /api/auth/token
- * Follower Tab Token Retrieval Endpoint
- * Read-only database query via auth_util.get_active_session_token(p_presented_hash).
- * Returns cached decrypted token or signals refresh_in_progress / refresh_required.
+ * Consolidated Session Handler (/api/auth/token & /api/auth/refresh)
+ *
+ * Dispatches by HTTP Method:
+ * - GET: Follower-tab token retrieval via auth_util.get_active_session_token.
+ * - POST: Leader-tab token refresh via GoTrue & auth_util.acquire_refresh_lease (from _refresh.js).
+ * - Other methods: HTTP 405 Method Not Allowed.
+ *
+ * Supported via Vercel rewrite:
+ * /api/auth/refresh -> /api/auth/token
+ *
  * Follows Frozen Architecture (Revision 11 Final) strictly.
  */
 
@@ -17,13 +23,10 @@ import {
   COOKIE_REFRESH_NAME,
   getDatabaseAdapter
 } from './_utils.js';
+import refreshHandler from './_refresh.js';
 
-export default async function handler(req, res) {
+export async function handleGetToken(req, res) {
   setSecurityHeaders(res);
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
 
   if (!validateOrigin(req)) {
     return res.status(403).json({ error: 'Invalid or missing origin' });
@@ -101,4 +104,19 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'INVALID_OR_EXPIRED' });
     }
   }
+}
+
+export default async function handler(req, res) {
+  setSecurityHeaders(res);
+
+  if (req.method === 'GET') {
+    return await handleGetToken(req, res);
+  }
+
+  if (req.method === 'POST') {
+    return await refreshHandler(req, res);
+  }
+
+  res.setHeader('Allow', 'GET, POST');
+  return res.status(405).json({ error: 'Method not allowed' });
 }
