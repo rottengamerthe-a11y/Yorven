@@ -49,7 +49,7 @@ export const services = [
       'Reactive user interfaces, API integration, and telemetry instrumentation',
       'Automated testing, continuous deployment, and app store release workflows'
     ],
-    caseStudySlugs: ['proofpay-ai', 'racers-vault']
+    caseStudySlugs: ['payper-ai', 'racers-vault']
   },
   {
     slug: 'systems',
@@ -80,7 +80,7 @@ export const services = [
 
 export const work = [
   {
-    slug: 'proofpay-ai',
+    slug: 'payper-ai',
     label: 'Web Application',
     title: 'Proofpay AI',
     subtitle: 'Receivables intelligence and automated cash flow operating system',

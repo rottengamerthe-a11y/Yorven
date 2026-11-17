@@ -461,6 +461,12 @@ export function Proof({ concepts }) {
       {concepts && <div id="featured-products" className={`lp-concepts ${hasResults ? 'lp-concepts-after' : ''}`}>
         {hasResults && <p className="eyebrow">Featured Products &amp; Platforms</p>}
         <div className="work-grid">{concepts}</div>
+        <div className="lp-section-cta" style={{ marginTop: '32px', textAlign: 'center' }}>
+          <Link to="/work" className="button button-lime" style={{ display: 'inline-flex' }}>
+            <span>Explore all selected work</span>
+            <ArrowUpRight size={16} />
+          </Link>
+        </div>
       </div>}
     </div>
   </section>
@@ -589,6 +595,12 @@ export function Solution({ servicesSlot }) {
       {servicesSlot && <div id="services" className="lp-services">
         <p className="eyebrow">{SOLUTION.servicesEyebrow}</p>
         {servicesSlot}
+        <div className="lp-section-cta" style={{ marginTop: '32px', textAlign: 'center' }}>
+          <Link to="/services" className="button button-lime" style={{ display: 'inline-flex' }}>
+            <span>Explore all services &amp; capabilities</span>
+            <ArrowUpRight size={16} />
+          </Link>
+        </div>
       </div>}
     </div>
   </section>

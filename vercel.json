@@ -1,5 +1,8 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/work/proofpay-ai", "destination": "/work/payper-ai", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/auth/mfa-enroll-verify", "destination": "/api/auth/mfa-enroll?action=verify" },
     { "source": "/api/auth/refresh", "destination": "/api/auth/token" },

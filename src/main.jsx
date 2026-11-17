@@ -956,7 +956,7 @@ function ServiceRow({ service, open, onToggle, index }) {
   )
 }
 function WorkVisualContent({ item }) {
-  if (item.slug === 'proofpay-ai') {
+  if (item.slug === 'payper-ai') {
     return (
       <div className="payper-mockup" aria-hidden="true">
         <div className="mockup-header">
@@ -1163,7 +1163,7 @@ function Work() {
   return (
     <PageShell eyebrow="Selected work" title={<>Featured Products &amp;<br /><span>Platforms</span></>}>
       <p className="page-intro">Real-world applications, mobile software, and high-scale systems engineered by our studio.</p>
-      <div className="work-grid work-page-grid">{work.map((item) => <WorkCard key={item.slug} item={item} />)}</div>
+      <div className="work-grid work-page-grid">{allProjects.map((item) => <WorkCard key={item.slug} item={item} />)}</div>
     </PageShell>
   ) 
 }
@@ -1479,7 +1479,6 @@ function ProofpayAIShowcase({ item }) {
 
 /* --- Modern Classes Bespoke Case Study (Phase 4 Overhaul) --- */
 function ModernClassesCaseStudy({ item, nextItem }) {
-  const navigate = useNavigate()
   const [activeScreen, setActiveScreen] = useState(0)
   const screens = item.carouselScreens || []
   const current = screens[activeScreen] || screens[0]
@@ -1494,23 +1493,14 @@ function ModernClassesCaseStudy({ item, nextItem }) {
   const nextScreen = () => setActiveScreen((prev) => (prev + 1) % screens.length)
   const prevScreen = () => setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
 
-  const handleBack = (e) => {
-    e.preventDefault()
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1)
-    } else {
-      navigate('/#proof')
-    }
-  }
-
   return (
     <div className="mc-page-wrapper" data-theme="teal">
       <article className="mc-editorial-page container">
       {/* Back Link */}
       <div className="mc-page-top">
-        <a href="/#proof" onClick={handleBack} className="cs-back-link">
-          <ArrowLeft size={16} /> <span>Back to Featured Products &amp; Platforms</span>
-        </a>
+        <Link to="/work" className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to all work</span>
+        </Link>
       </div>
 
       {/* Hero: 2-Column Split (Editorial Info on Left, Phone Showcase on Right) */}
@@ -1775,23 +1765,13 @@ function CaseStudy() {
   if (!item) {
     return (
       <PageShell eyebrow="404" title={<>Product not<br /><span>found</span></>}>
-        <Link className="button button-lime" to="/#featured-products">Back to products <ArrowUpRight size={17} /></Link>
+        <Link className="button button-lime" to="/work">Back to all work <ArrowUpRight size={17} /></Link>
       </PageShell>
     );
   }
 
-  const navigate = useNavigate();
-  const currentIndex = work.findIndex((p) => p.slug === slug);
-  const nextItem = currentIndex !== -1 ? work[(currentIndex + 1) % work.length] : work[0];
-
-  const handleBack = (e) => {
-    e.preventDefault();
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/#featured-products');
-    }
-  };
+  const currentIndex = allProjects.findIndex((p) => p.slug === slug);
+  const nextItem = currentIndex !== -1 ? allProjects[(currentIndex + 1) % allProjects.length] : allProjects[0];
 
   if (slug === 'modern-classes') {
     return <ModernClassesCaseStudy item={item} nextItem={nextItem} />
@@ -1801,9 +1781,9 @@ function CaseStudy() {
     <article className="cs-editorial-page container">
       {/* 1. Calm Editorial Header */}
       <header className="cs-editorial-header">
-        <a href="/#featured-products" onClick={handleBack} className="cs-back-link">
-          <ArrowLeft size={16} /> <span>Back to Featured Products &amp; Platforms</span>
-        </a>
+        <Link to="/work" className="cs-back-link">
+          <ArrowLeft size={16} /> <span>Back to all work</span>
+        </Link>
 
         <div className="cs-hero-titles">
           <div className="cs-category-row">
@@ -1825,7 +1805,7 @@ function CaseStudy() {
 
       {/* 2. Primary Focal Showcase */}
       <section className="cs-primary-showcase" aria-label="Product Showcase">
-        {item.slug === 'proofpay-ai' && <ProofpayAIShowcase item={item} />}
+        {item.slug === 'payper-ai' && <ProofpayAIShowcase item={item} />}
         {item.slug === 'racers-vault' && <RacersVaultShowcase item={item} />}
         {item.slug === 'aurix' && <AurixShowcase item={item} />}
         {item.slug === 'modern-classes' && <ModernClassesShowcase item={item} />}
@@ -2849,6 +2829,7 @@ export function AppRoutes() {
           <Route path="/services" element={<ServicesHub />} />
           <Route path="/services/:slug" element={<ServiceLandingPage />} />
           <Route path="/work" element={<Work />} />
+          <Route path="/work/proofpay-ai" element={<Navigate to="/work/payper-ai" replace />} />
           <Route path="/work/:slug" element={<CaseStudy />} />
           <Route path="/insights" element={<InsightsListing />} />
           <Route path="/insights/:slug" element={<InsightArticle />} />
