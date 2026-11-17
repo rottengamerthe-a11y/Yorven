@@ -13,20 +13,53 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 /**
  * Serializes a database page record to truthful indexing status.
- * If last_crawled_at is null, is_indexed is serialized as null and indexing_status_verified as false.
+ * Integrates live Google URL Inspection state from public.seo_monitored_pages_view or base tables.
  */
 function serializePageRecord(page, metrics30d = null) {
-  const isVerified = Boolean(page.last_crawled_at);
+  const isVerified = Boolean(
+    page.latest_attempt_time ||
+    page.last_successful_inspected_at ||
+    page.last_crawled_at
+  );
+
+  let isIndexed = null;
+  if (page.last_successful_verdict) {
+    isIndexed = page.last_successful_verdict === 'PASS';
+  } else if (page.is_indexed !== undefined && page.is_indexed !== null) {
+    isIndexed = Boolean(page.is_indexed);
+  }
 
   return {
-    id: page.id,
+    id: page.page_id || page.id,
     path: page.path,
     title: page.title,
     canonical_url: page.canonical_url,
-    is_indexed: isVerified ? Boolean(page.is_indexed) : null,
+    is_indexed: isIndexed,
     indexing_status_verified: isVerified,
-    last_crawled_at: page.last_crawled_at || null,
-    updated_at: page.updated_at,
+    last_crawled_at: page.last_successful_google_crawl_time || page.last_crawled_at || null,
+    updated_at: page.page_updated_at || page.updated_at,
+    // Google URL Inspection metadata
+    last_inspected_at: page.latest_attempt_time || page.last_successful_inspected_at || null,
+    inspection_verdict: page.latest_attempt_verdict || page.last_successful_verdict || null,
+    coverage_state: page.latest_attempt_coverage_state || page.last_successful_coverage_state || null,
+    indexing_state: page.last_successful_indexing_state || null,
+    robots_txt_state: page.last_successful_robots_txt || null,
+    page_fetch_state: page.last_successful_page_fetch_state || null,
+    google_canonical: page.last_successful_google_canonical || null,
+    user_canonical: page.last_successful_user_canonical || null,
+    crawled_as: page.last_successful_crawled_as || null,
+    google_last_crawl_time: page.last_successful_google_crawl_time || null,
+    inspection_error: page.latest_attempt_error_message || page.latest_attempt_error_code || null,
+    error_code: page.latest_attempt_error_code || null,
+    active_job: page.active_job_id ? {
+      id: page.active_job_id,
+      type: page.active_job_type,
+      status: page.active_job_status
+    } : null,
+    computed_state: page.computed_state || (page.is_pending ? 'queued' : (page.is_processing ? 'processing' : (isVerified ? (isIndexed ? 'success' : 'failed') : 'never_inspected'))),
+    is_pending: Boolean(page.is_pending || page.active_job_status === 'pending'),
+    is_processing: Boolean(page.is_processing || page.active_job_status === 'processing'),
+    is_never_inspected: Boolean(page.is_never_inspected ?? (!isVerified && !page.active_job_id)),
     metrics_30d: metrics30d
   };
 }
@@ -62,17 +95,35 @@ export default async function handler(req, res) {
 
     if (pageId) {
       // 1. Single Page Detail
-      const pageRes = await fetch(
-        `${db.supabaseUrl}/rest/v1/seo_pages?id=eq.${pageId}&select=id,path,title,meta_description,canonical_url,is_indexed,last_crawled_at,updated_at`,
-        { headers: db.getPostgrestHeaders('public') }
-      );
-      if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`);
-
-      const pages = await pageRes.json();
-      if (!Array.isArray(pages) || pages.length === 0) {
-        return res.status(404).json({ error: 'PAGE_NOT_FOUND', message: `No monitored route found with ID ${pageId}` });
+      let page = null;
+      try {
+        const viewRes = await fetch(
+          `${db.supabaseUrl}/rest/v1/seo_monitored_pages_view?page_id=eq.${pageId}&select=*`,
+          { headers: db.getPostgrestHeaders('public') }
+        );
+        if (viewRes.ok) {
+          const viewPages = await viewRes.json();
+          if (Array.isArray(viewPages) && viewPages.length > 0) {
+            page = viewPages[0];
+          }
+        }
+      } catch {
+        // Fall back to base table
       }
-      const page = pages[0];
+
+      if (!page) {
+        const pageRes = await fetch(
+          `${db.supabaseUrl}/rest/v1/seo_pages?id=eq.${pageId}&select=id,path,title,meta_description,canonical_url,is_indexed,last_crawled_at,updated_at`,
+          { headers: db.getPostgrestHeaders('public') }
+        );
+        if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`);
+
+        const pages = await pageRes.json();
+        if (!Array.isArray(pages) || pages.length === 0) {
+          return res.status(404).json({ error: 'PAGE_NOT_FOUND', message: `No monitored route found with ID ${pageId}` });
+        }
+        page = pages[0];
+      }
 
       // Fetch 30-day GSC queries for this page
       const gscRes = await fetch(
@@ -117,6 +168,23 @@ export default async function handler(req, res) {
         totalConversions += Number(g.conversions) || 0;
       }
 
+      // Fetch recent inspection history for this page
+      let inspectionHistory = [];
+      try {
+        const inspectionsRes = await fetch(
+          `${db.supabaseUrl}/rest/v1/seo_url_inspections?page_id=eq.${pageId}&order=inspected_at.desc&limit=20&select=id,attempt_status,verdict,coverage_state,indexing_state,robots_txt_state,page_fetch_state,google_canonical,user_canonical,crawled_as,google_last_crawl_time,error_code,error_message,inspected_at`,
+          { headers: db.getPostgrestHeaders('public') }
+        );
+        if (inspectionsRes.ok) {
+          const list = await inspectionsRes.json();
+          if (Array.isArray(list)) {
+            inspectionHistory = list;
+          }
+        }
+      } catch {
+        inspectionHistory = [];
+      }
+
       const metrics30d = {
         clicks: totalClicks,
         impressions: totalImpressions,
@@ -133,18 +201,36 @@ export default async function handler(req, res) {
       const serialized = serializePageRecord(page, metrics30d);
       serialized.meta_description = page.meta_description;
       serialized.top_queries_30d = gscQueries.slice(0, 50);
+      serialized.inspection_history = inspectionHistory;
 
       return res.status(200).json({ page: serialized });
     }
 
-    // 2. All 9 Monitored Routes List
-    const pagesRes = await fetch(
-      `${db.supabaseUrl}/rest/v1/seo_pages?select=id,path,title,canonical_url,is_indexed,last_crawled_at,updated_at&order=path.asc`,
-      { headers: db.getPostgrestHeaders('public') }
-    );
-    if (!pagesRes.ok) throw new Error(`HTTP ${pagesRes.status}`);
+    // 2. All Monitored Routes List
+    let pages = [];
+    try {
+      const viewRes = await fetch(
+        `${db.supabaseUrl}/rest/v1/seo_monitored_pages_view?select=*&order=path.asc`,
+        { headers: db.getPostgrestHeaders('public') }
+      );
+      if (viewRes.ok) {
+        const viewRows = await viewRes.json();
+        if (Array.isArray(viewRows) && viewRows.length > 0) {
+          pages = viewRows;
+        }
+      }
+    } catch {
+      // Fall back to base table
+    }
 
-    const pages = await pagesRes.json();
+    if (!Array.isArray(pages) || pages.length === 0) {
+      const pagesRes = await fetch(
+        `${db.supabaseUrl}/rest/v1/seo_pages?select=id,path,title,canonical_url,is_indexed,last_crawled_at,updated_at&order=path.asc`,
+        { headers: db.getPostgrestHeaders('public') }
+      );
+      if (!pagesRes.ok) throw new Error(`HTTP ${pagesRes.status}`);
+      pages = await pagesRes.json();
+    }
 
     // Fetch 30-day GSC metrics grouped by page_id
     const gscSummaryRes = await fetch(
@@ -184,8 +270,9 @@ export default async function handler(req, res) {
     }
 
     const serializedPages = pages.map((page) => {
-      const gsc = gscByPage.get(page.id) || { clicks: 0, impressions: 0, sumPos: 0 };
-      const ga4 = ga4ByPage.get(page.id) || { sessions: 0, activeUsers: 0 };
+      const targetId = page.page_id || page.id;
+      const gsc = gscByPage.get(targetId) || { clicks: 0, impressions: 0, sumPos: 0 };
+      const ga4 = ga4ByPage.get(targetId) || { sessions: 0, activeUsers: 0 };
 
       const metrics30d = {
         clicks: gsc.clicks,
@@ -203,7 +290,7 @@ export default async function handler(req, res) {
       pages: serializedPages,
       total_monitored_routes: serializedPages.length,
       disclaimers: {
-        indexing_note: 'is_indexed is null and indexing_status_verified is false until Google URL Inspection API is executed (deferred to Step 2.9).'
+        indexing_note: 'Status reflects live Google URL Inspection state from public.seo_monitored_pages_view.'
       }
     });
   } catch (err) {

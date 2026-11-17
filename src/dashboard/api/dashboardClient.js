@@ -223,6 +223,44 @@ export async function getPagesApi(token, pageId = null) {
   return res.data;
 }
 
+/**
+ * Triggers an on-demand Google URL Inspection job for a single route.
+ * Requires Owner AAL2 JWT and CSRF header.
+ * Sends only { page_id: UUID } — never client-supplied arbitrary URLs or credentials.
+ *
+ * @param {string} token - In-memory Owner Bearer token
+ * @param {string} pageId - Target route UUID from public.seo_pages
+ * @returns {Promise<{ status: number, enqueued: boolean, data: Object }>}
+ */
+export async function inspectUrlApi(token, pageId) {
+  const res = await apiRequest('/api/seo/inspect', {
+    method: 'POST',
+    body: { page_id: pageId },
+    token
+  });
+
+  if (res.status === 202) {
+    return {
+      status: 202,
+      enqueued: true,
+      data: res.data
+    };
+  }
+
+  if (res.status === 409) {
+    const err = new Error(res.data?.message || 'An inspection job is already active for this route.');
+    err.status = 409;
+    err.code = res.data?.error || 'CONFLICT_ACTIVE_JOB';
+    err.data = res.data;
+    throw err;
+  }
+
+  const err = new Error(res.data?.message || res.data?.error || `Inspection request failed with HTTP ${res.status}`);
+  err.status = res.status;
+  err.data = res.data;
+  throw err;
+}
+
 export async function getMetricsApi(token, startDate, endDate, pageId = null) {
   const params = new URLSearchParams();
   if (startDate) params.set('startDate', startDate);

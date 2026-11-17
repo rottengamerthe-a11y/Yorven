@@ -8,27 +8,36 @@ import crypto from 'node:crypto';
 import { getDatabaseAdapter } from '../auth/_utils.js';
 import { fetchGscSearchAnalytics } from './_gsc_adapter.js';
 import { fetchGa4Metrics } from './_ga4_adapter.js';
+import { inspectGoogleUrl } from './_url_inspection_adapter.js';
 
 /**
  * Creates a new sync job record in public.seo_sync_jobs with status = 'pending'.
  */
-export async function createSyncJob(db, jobType = 'full_resync', maxRetries = 3) {
-  return await db.callAuthUtilRpc('create_sync_job', {
+export async function createSyncJob(db, jobType = 'full_resync', maxRetries = 3, payload = {}) {
+  const params = {
     p_job_type: jobType,
     p_max_retries: maxRetries
-  });
+  };
+  if (payload !== undefined && payload !== null) {
+    params.p_payload = payload;
+  }
+  return await db.callAuthUtilRpc('create_sync_job', params);
 }
 
 /**
  * Atomically claims the oldest pending or expired processing job in FIFO order.
- * Returns JSONB: { claimed, job_id, job_type, generation, lease_expires_at, error }
+ * Returns JSONB: { claimed, job_id, job_type, generation, lease_expires_at, payload, error }
  */
-export async function claimSyncJob(db, workerId, leaseAttemptId, leaseDurationMs = 300000) {
-  return await db.callAuthUtilRpc('claim_sync_job', {
+export async function claimSyncJob(db, workerId, leaseAttemptId, leaseDurationMs = 300000, jobTypeFilter = null) {
+  const params = {
     p_worker_id: workerId,
     p_lease_attempt_id: leaseAttemptId,
     p_lease_duration_ms: leaseDurationMs
-  });
+  };
+  if (jobTypeFilter) {
+    params.p_job_type_filter = jobTypeFilter;
+  }
+  return await db.callAuthUtilRpc('claim_sync_job', params);
 }
 
 /**
@@ -255,6 +264,404 @@ export function getDefaultSyncDates() {
 }
 
 /**
+ * Inserts a single URL inspection record into public.seo_url_inspections.
+ * Satisfies chk_inspection_attempt_consistency:
+ * - success: verdict is NOT NULL, error_code is NULL.
+ * - failed: error_code is NOT NULL, verdict is NULL.
+ */
+export async function insertInspectionRecord(db, record) {
+  const row = {
+    page_id: record.page_id || null,
+    job_id: record.job_id || null,
+    inspection_url: record.inspection_url,
+    attempt_status: record.attempt_status,
+    verdict: record.attempt_status === 'success' ? (record.verdict || 'VERDICT_UNSPECIFIED') : null,
+    coverage_state: record.coverage_state || null,
+    indexing_state: record.indexing_state || null,
+    robots_txt_state: record.robots_txt_state || null,
+    page_fetch_state: record.page_fetch_state || null,
+    google_canonical: record.google_canonical || null,
+    user_canonical: record.user_canonical || null,
+    crawled_as: record.crawled_as || null,
+    google_last_crawl_time: record.google_last_crawl_time || null,
+    error_code: record.attempt_status === 'failed' ? (record.error_code || 'UNKNOWN_ERROR') : null,
+    error_message: record.error_message || null,
+    raw_response: record.raw_response && typeof record.raw_response === 'object' ? record.raw_response : {},
+    inspected_at: record.inspected_at || new Date().toISOString()
+  };
+
+  const res = await fetch(`${db.supabaseUrl}/rest/v1/seo_url_inspections`, {
+    method: 'POST',
+    headers: {
+      ...db.getPostgrestHeaders('public'),
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(row)
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Failed to insert inspection record: HTTP ${res.status} ${errText}`);
+  }
+
+  const inserted = await res.json().catch(() => null);
+  return Array.isArray(inserted) && inserted.length > 0 ? inserted[0] : row;
+}
+
+/**
+ * Executes a single route URL inspection job (url_inspection_single).
+ */
+export async function executeUrlInspectionSingleWorkload({
+  db,
+  jobId,
+  generation,
+  leaseAttemptId,
+  workerId,
+  profile = 'manual',
+  signal,
+  startTime = Date.now(),
+  payload = null
+}) {
+  const pageId = payload?.page_id;
+  if (!pageId || typeof pageId !== 'string' || !UUID_REGEX.test(pageId)) {
+    const durationMs = Date.now() - startTime;
+    const errMsg = 'INVALID_SINGLE_ROUTE_PAYLOAD: Missing or invalid page_id in job payload';
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errMsg);
+    await insertSyncLog(db, jobId, 'error', 'INSPECTION_SINGLE_FAILED', {
+      job_id: jobId,
+      page_id: pageId,
+      error: errMsg,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_single',
+      durationMs,
+      error: errMsg
+    };
+  }
+
+  let pages;
+  try {
+    const loaded = await loadMonitoredPages(db);
+    pages = loaded.pages;
+  } catch (err) {
+    const durationMs = Date.now() - startTime;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', err.message);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: 'url_inspection_single',
+      phase: 'registry_load',
+      duration_ms: durationMs,
+      error: err.message,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_single',
+      durationMs,
+      error: `Failed to load route registry: ${err.message}`
+    };
+  }
+
+  const page = pages.find((p) => p.id === pageId);
+  if (!page) {
+    const durationMs = Date.now() - startTime;
+    const errMsg = `PAGE_NOT_FOUND: Route ID '${pageId}' not found in monitored registry`;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errMsg);
+    await insertSyncLog(db, jobId, 'error', 'INSPECTION_SINGLE_FAILED', {
+      job_id: jobId,
+      page_id: pageId,
+      error: errMsg,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_single',
+      durationMs,
+      error: errMsg
+    };
+  }
+
+  const cleanPath = page.path === '/' ? '' : page.path;
+  const canonicalUrl = page.canonical_url && page.canonical_url.startsWith('https://')
+    ? page.canonical_url
+    : `https://yorven.in${cleanPath}`;
+
+  const inspectionResult = await inspectGoogleUrl({
+    inspectionUrl: canonicalUrl,
+    signal
+  });
+
+  const durationMs = Date.now() - startTime;
+
+  // Persist attempt independently of success or failure
+  const persistedRecord = await insertInspectionRecord(db, {
+    ...inspectionResult,
+    page_id: page.id,
+    job_id: jobId,
+    inspection_url: canonicalUrl
+  });
+
+  if (inspectionResult.success) {
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'completed');
+    await insertSyncLog(db, jobId, 'info', 'INSPECTION_SINGLE_COMPLETED', {
+      job_id: jobId,
+      page_id: page.id,
+      inspection_url: canonicalUrl,
+      verdict: inspectionResult.verdict,
+      duration_ms: durationMs,
+      worker_id: workerId
+    });
+    return {
+      success: true,
+      jobId,
+      jobType: 'url_inspection_single',
+      durationMs,
+      inspectionRecord: persistedRecord
+    };
+  } else {
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', inspectionResult.error_message);
+    await insertSyncLog(db, jobId, 'error', 'INSPECTION_SINGLE_FAILED', {
+      job_id: jobId,
+      page_id: page.id,
+      inspection_url: canonicalUrl,
+      error_code: inspectionResult.error_code,
+      error: inspectionResult.error_message,
+      duration_ms: durationMs,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_single',
+      durationMs,
+      error: inspectionResult.error_message,
+      inspectionRecord: persistedRecord
+    };
+  }
+}
+
+/**
+ * Executes a bulk URL inspection job across snapshotted routes (url_inspection_all).
+ */
+export async function executeUrlInspectionAllWorkload({
+  db,
+  jobId,
+  generation,
+  leaseAttemptId,
+  workerId,
+  profile = 'worker',
+  signal,
+  startTime = Date.now(),
+  payload = null,
+  pacingDelayMs = 1000
+}) {
+  const targetPageIds = payload?.target_page_ids;
+  if (!Array.isArray(targetPageIds) || targetPageIds.length === 0) {
+    const durationMs = Date.now() - startTime;
+    const errMsg = 'INVALID_BULK_PAYLOAD: Missing or empty target_page_ids snapshot in job payload';
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errMsg);
+    await insertSyncLog(db, jobId, 'error', 'INSPECTION_ALL_FAILED', {
+      job_id: jobId,
+      error: errMsg,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_all',
+      durationMs,
+      error: errMsg,
+      inspectedCount: 0,
+      successCount: 0,
+      failureCount: 0
+    };
+  }
+
+  let pages;
+  try {
+    const loaded = await loadMonitoredPages(db);
+    pages = loaded.pages;
+  } catch (err) {
+    const durationMs = Date.now() - startTime;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', err.message);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: 'url_inspection_all',
+      phase: 'registry_load',
+      duration_ms: durationMs,
+      error: err.message,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_all',
+      durationMs,
+      error: `Failed to load route registry: ${err.message}`,
+      inspectedCount: 0,
+      successCount: 0,
+      failureCount: 0
+    };
+  }
+
+  const pagesById = new Map(pages.map((p) => [p.id, p]));
+  let inspectedCount = 0;
+  let successCount = 0;
+  let failureCount = 0;
+  let quotaExhausted = false;
+  let quotaError = null;
+  const inspectionRecords = [];
+
+  for (let i = 0; i < targetPageIds.length; i++) {
+    const pageId = targetPageIds[i];
+
+    if (signal?.aborted) {
+      throw new Error('EXECUTION_BUDGET_EXCEEDED');
+    }
+
+    // Pacing delay between sequential requests
+    if (i > 0 && pacingDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, pacingDelayMs));
+    }
+
+    const page = pagesById.get(pageId);
+    if (!page) {
+      // Route was deleted or missing from registry
+      failureCount++;
+      await insertSyncLog(db, jobId, 'warn', 'BULK_ROUTE_SKIPPED_NOT_FOUND', {
+        job_id: jobId,
+        page_id: pageId,
+        message: `Route ID '${pageId}' from snapshot no longer found in monitored registry`
+      });
+      continue;
+    }
+
+    const cleanPath = page.path === '/' ? '' : page.path;
+    const canonicalUrl = page.canonical_url && page.canonical_url.startsWith('https://')
+      ? page.canonical_url
+      : `https://yorven.in${cleanPath}`;
+
+    const inspectionResult = await inspectGoogleUrl({
+      inspectionUrl: canonicalUrl,
+      signal
+    });
+
+    const persisted = await insertInspectionRecord(db, {
+      ...inspectionResult,
+      page_id: page.id,
+      job_id: jobId,
+      inspection_url: canonicalUrl
+    });
+
+    inspectionRecords.push(persisted);
+    inspectedCount++;
+
+    if (inspectionResult.success) {
+      successCount++;
+    } else {
+      failureCount++;
+      if (inspectionResult.error_code === 'HTTP_429_QUOTA') {
+        quotaExhausted = true;
+        quotaError = `HTTP_429_QUOTA: ${inspectionResult.error_message || 'Quota exceeded'}`;
+        await insertSyncLog(db, jobId, 'error', 'BULK_INSPECTION_QUOTA_EXHAUSTED', {
+          job_id: jobId,
+          page_id: page.id,
+          inspected_count: inspectedCount,
+          error: quotaError
+        });
+        break; // Stop further Google API requests immediately!
+      }
+    }
+  }
+
+  const durationMs = Date.now() - startTime;
+
+  if (quotaExhausted) {
+    const errorMsg = `BULK_INSPECTION_QUOTA_EXHAUSTED: ${quotaError}`;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errorMsg);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: 'url_inspection_all',
+      duration_ms: durationMs,
+      error: errorMsg,
+      inspected_count: inspectedCount,
+      success_count: successCount,
+      failure_count: failureCount,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_all',
+      durationMs,
+      error: errorMsg,
+      inspectedCount,
+      successCount,
+      failureCount,
+      quotaExhausted: true,
+      inspectionRecords
+    };
+  }
+
+  if (failureCount > 0 || inspectedCount === 0) {
+    const errorMsg = inspectedCount === 0
+      ? 'No valid monitored routes were inspected'
+      : `${failureCount} of ${targetPageIds.length} routes failed inspection`;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errorMsg);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: 'url_inspection_all',
+      duration_ms: durationMs,
+      error: errorMsg,
+      inspected_count: inspectedCount,
+      success_count: successCount,
+      failure_count: failureCount,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType: 'url_inspection_all',
+      durationMs,
+      error: errorMsg,
+      inspectedCount,
+      successCount,
+      failureCount,
+      quotaExhausted: false,
+      inspectionRecords
+    };
+  }
+
+  // All routes inspected successfully
+  await completeSyncJob(db, jobId, leaseAttemptId, generation, 'completed');
+  await insertSyncLog(db, jobId, 'info', 'SYNC_JOB_COMPLETED', {
+    job_id: jobId,
+    job_type: 'url_inspection_all',
+    duration_ms: durationMs,
+    inspected_count: inspectedCount,
+    success_count: successCount,
+    worker_id: workerId
+  });
+
+  return {
+    success: true,
+    jobId,
+    jobType: 'url_inspection_all',
+    durationMs,
+    inspectedCount,
+    successCount,
+    failureCount: 0,
+    quotaExhausted: false,
+    inspectionRecords
+  };
+}
+
+/**
  * Executes synchronization for a claimed job under the specified profile.
  * - Profile 'manual': 6,500 ms hard internal cutoff (leaves 3,000 ms quarantine for cleanup before 10s ceiling).
  * - Profile 'worker': Independent 10-minute VM allowance.
@@ -267,7 +674,9 @@ export async function executeClaimedSyncWorkload({
   leaseAttemptId,
   workerId,
   profile = 'manual',
-  parentSignal
+  parentSignal,
+  payload = null,
+  pacingDelayMs = 1000
 }) {
   const isManual = profile === 'manual';
   const startTime = Date.now();
@@ -283,6 +692,82 @@ export async function executeClaimedSyncWorkload({
   const signal = parentSignal
     ? AbortSignal.any([parentSignal, controller.signal])
     : controller.signal;
+
+  // 1. Validate supported job type taxonomy
+  const supportedJobTypes = new Set([
+    'gsc_daily',
+    'ga4_daily',
+    'full_resync',
+    'url_inspection_single',
+    'url_inspection_all'
+  ]);
+
+  if (!supportedJobTypes.has(jobType)) {
+    const durationMs = Date.now() - startTime;
+    const errorMsg = `UNKNOWN_JOB_TYPE: Unsupported job type '${jobType}'`;
+    await completeSyncJob(db, jobId, leaseAttemptId, generation, 'failed', errorMsg);
+    await insertSyncLog(db, jobId, 'error', 'SYNC_JOB_FAILED', {
+      job_id: jobId,
+      job_type: jobType,
+      phase: 'routing',
+      duration_ms: durationMs,
+      error: errorMsg,
+      worker_id: workerId
+    });
+    return {
+      success: false,
+      jobId,
+      jobType,
+      durationMs,
+      error: errorMsg
+    };
+  }
+
+  // 2. Fetch payload from db if not explicitly provided for URL inspection jobs
+  let activePayload = payload;
+  if (!activePayload && (jobType === 'url_inspection_single' || jobType === 'url_inspection_all')) {
+    try {
+      const res = await fetch(`${db.supabaseUrl}/rest/v1/seo_sync_jobs?id=eq.${jobId}&select=payload`, {
+        headers: db.getPostgrestHeaders('public')
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        activePayload = rows[0]?.payload || {};
+      }
+    } catch {
+      activePayload = {};
+    }
+  }
+
+  // 3. Dispatch to URL inspection executors if applicable
+  if (jobType === 'url_inspection_single') {
+    return await executeUrlInspectionSingleWorkload({
+      db,
+      jobId,
+      generation,
+      leaseAttemptId,
+      workerId,
+      profile,
+      signal,
+      startTime,
+      payload: activePayload
+    });
+  }
+
+  if (jobType === 'url_inspection_all') {
+    return await executeUrlInspectionAllWorkload({
+      db,
+      jobId,
+      generation,
+      leaseAttemptId,
+      workerId,
+      profile,
+      signal,
+      startTime,
+      payload: activePayload,
+      pacingDelayMs
+    });
+  }
 
   let gscPersistedRows = 0;
   let ga4PersistedRows = 0;

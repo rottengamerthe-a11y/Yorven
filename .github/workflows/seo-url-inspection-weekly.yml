@@ -1,0 +1,59 @@
+name: SEO URL Inspection Schedule & Worker
+
+on:
+  schedule:
+    # 1. Run the inspection worker every 15 minutes to drain pending manual and bulk jobs
+    - cron: '*/15 * * * *'
+    # 2. Run weekly bulk inspection trigger on Sundays at 03:00 UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      enqueue_bulk:
+        description: 'Enqueue a new bulk URL inspection job across all monitored routes'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yorven-seo-url-inspection
+  cancel-in-progress: false
+
+jobs:
+  inspection:
+    name: Execute SEO URL Inspection Schedule & Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Enqueue step executes ONLY on Sunday 03:00 UTC schedule OR manual dispatch with enqueue_bulk=true
+      - name: Enqueue Weekly Bulk Inspection Job
+        if: github.event.schedule == '0 3 * * 0' || inputs.enqueue_bulk == true
+        run: node scripts/seo_enqueue_weekly_inspection.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      # Worker execution runs on every schedule and manual dispatch to drain available inspection jobs
+      - name: Execute URL Inspection Worker
+        run: node scripts/seo_url_inspection_worker.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+          GSC_CLIENT_EMAIL: ${{ secrets.GSC_CLIENT_EMAIL }}
+          GSC_PRIVATE_KEY: ${{ secrets.GSC_PRIVATE_KEY }}
