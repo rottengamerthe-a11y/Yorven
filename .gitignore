@@ -24,7 +24,19 @@ Thumbs.db
 !.env.example
 *.key
 scratch/
+bearer.txt
+bearer_err.txt
+status.txt
+status_err.txt
 
-# Local Development & Tools
+# Local Development & Debugging Tools
 bridge.py
 vite.config.local.js
+rpc_test.ps1
+run_worker.ps1
+test_history.ps1
+test_history2.ps1
+temp_home.html
+temp_sitemap.xml
+demo_parser.mjs
+demo_test.mjs

@@ -2891,7 +2891,8 @@ export function App() {
 
     if (window.location.hash) {
       setTimeout(() => {
-        const target = document.querySelector(window.location.hash) || (window.location.hash === '#work' ? document.getElementById('featured-products') : null)
+        const hashId = window.location.hash.replace(/^#/, '')
+        const target = (hashId ? document.getElementById(hashId) : null) || (window.location.hash === '#work' ? document.getElementById('featured-products') : null)
         if (target) lenis.scrollTo(target, { offset: -96, immediate: true })
       }, 50)
     }
