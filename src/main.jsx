@@ -622,7 +622,6 @@ function Home() {
   useScrollMotion()
   return (
     <div className="home-page-wrap">
-      <SculptureCanvas />
       <Hero />
       <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
       <Problem />

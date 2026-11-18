@@ -13,28 +13,11 @@
 .lp-dark h2 span:nth-child(2) { color: var(--mint); }
 .lp-light h2 span:first-child { color: var(--teal); }
 
-/* Glass Sculpture Stage & Radial Glow */
-.sculpture-radial-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90vw;
-  height: 90vh;
-  max-width: 1100px;
-  max-height: 850px;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(circle at center, rgba(215, 237, 131, 0.14) 0%, rgba(14, 76, 70, 0.28) 42%, rgba(8, 45, 44, 0) 72%);
-  filter: blur(50px);
-  will-change: transform;
-}
-
-/* Landing sections layering over sculpture stage */
+/* Landing sections base wrapper */
 .home-page-wrap {
   position: relative;
-  background: var(--teal);
-  min-height: 100vh;
+  background: var(--bg-app);
+  min-height: 100dvh;
   overflow-x: clip;
 }
 .lp-hero-wrap,
