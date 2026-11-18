@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Activity, ArrowDown, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Cpu, ExternalLink, FileCheck, FileText, HelpCircle, Layers, LayoutDashboard, List, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, Tv, X, Zap } from 'lucide-react'
+import { Activity, ArrowDown, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Command, Cpu, ExternalLink, FileCheck, FileText, HelpCircle, Layers, LayoutDashboard, List, Lock, Menu, Search, ShieldCheck, Sparkles, Terminal, Tv, X, Zap } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { pageMeta, services, work, allProjects } from './data/site'
@@ -12,7 +12,7 @@ import { TableOfContents } from './components/insights/TableOfContents'
 import { assembleParticles } from './components/particleAssemble'
 import './styles.css'
 import { SculptureCanvas } from './components/ui/SculptureCanvas'
-import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
+import { Hero, SelectedWork, Problem, HowWeWork, ServicesSection, WeekPlanSection, Faq, ClosingCta, Proof, Solution, HowItWorks, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
 import { SafeImage } from './components/ui/SafeImage'
@@ -476,6 +476,7 @@ function Layout({ children }) {
               <X size={20} />
             </button>
           </div>
+          <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
           <NavLink
             to="/services"
             onClick={(e) => {
@@ -498,9 +499,8 @@ function Layout({ children }) {
           >
             Services
           </NavLink>
-          <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
-          <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
           <NavLink to="/about" onClick={() => setOpen(false)}>About</NavLink>
+          <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
           <NavLink className="nav-contact" to="/contact" onClick={() => setOpen(false)}>
             Start a project <ArrowUpRight size={15} />
           </NavLink>
@@ -623,12 +623,13 @@ function Home() {
   return (
     <div className="home-page-wrap">
       <Hero />
-      <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
+      <SelectedWork />
       <Problem />
-      <Solution servicesSlot={<ServiceCards />} />
-      <HowItWorks />
+      <HowWeWork />
+      <ServicesSection />
+      <WeekPlanSection />
       <Faq />
-      <FinalCta />
+      <ClosingCta />
       <StickyBottomCta label="Start a project" to="/contact" />
     </div>
   )
@@ -964,7 +965,7 @@ function WorkVisualContent({ item }) {
       <div className="payper-mockup" aria-hidden="true">
         <div className="mockup-header">
           <div className="mockup-brand">
-            <span className="mockup-cmd-icon">⌘</span>
+            <Command size={12} className="mockup-cmd-icon" />
             <strong>proofpay<span className="brand-accent">.ai</span></strong>
           </div>
           <span className="mockup-badge ai-badge">
@@ -1428,7 +1429,7 @@ function ProofpayAIShowcase({ item }) {
             <span className="dot-green" />
           </div>
           <div className="browser-url-bar">
-            <span className="url-lock">🔒</span> proofpay.ai/receivables
+            <Lock size={11} className="url-lock" /> proofpay.ai/receivables
           </div>
           <a
             href="http://localhost:5174/"
@@ -2677,10 +2678,10 @@ function Contact() {
                         aria-describedby={error ? 'contact-form-error' : undefined}
                       >
                         <option value="" disabled>Select launch window</option>
-                        <option>Exploring / Early planning</option>
-                        <option>Within 1–2 months</option>
-                        <option>Within 3–6 months</option>
-                        <option>Flexible</option>
+                        <option>4–8 weeks (Websites)</option>
+                        <option>8–16 weeks (Digital products)</option>
+                        <option>6–12 weeks (Systems & scale)</option>
+                        <option>Flexible / Early planning</option>
                       </select>
                     </label>
                   </div>
