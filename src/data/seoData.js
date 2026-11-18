@@ -6,7 +6,7 @@
 import { getPublishedInsights } from './insights.js'
 
 export const SITE_URL = 'https://yorven.in'
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/yorven-wordmark.svg`
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 
 export const organizationSchema = {
   '@context': 'https://schema.org',
@@ -44,7 +44,7 @@ export const seoRoutes = {
   },
   '/services': {
     title: 'Engineering Services & Digital Product Capabilities — Yorven',
-    description: 'Explore Yorven’s core engineering disciplines: high-performance websites, web and mobile digital products, and resilient cloud systems built with weekly working demos.',
+    description: 'Explore Yorven’s core engineering disciplines: high-performance websites, web and mobile digital products, and resilient cloud systems built with weekly demos.',
     canonical: `${SITE_URL}/services`,
     ogType: 'website',
     ogImage: DEFAULT_OG_IMAGE,
@@ -98,8 +98,8 @@ export const seoRoutes = {
     ]
   },
   '/services/digital-products': {
-    title: 'Web & Mobile Application Engineering (SaaS, iOS & Android) — Yorven',
-    description: 'Full-stack engineering for web applications, SaaS platforms, and mobile apps (iOS & Android). Shipped with weekly working demos, backed by ProofPay, Racers Vault, and Modern Classes.',
+    title: 'Web & Mobile App Development — Yorven',
+    description: 'Web, SaaS, and mobile app engineering with weekly demos, backed by ProofPay, Racers Vault, and Modern Classes.',
     canonical: `${SITE_URL}/services/digital-products`,
     ogType: 'article',
     ogImage: `${SITE_URL}/projects/payper-ai-live.png`,
@@ -174,7 +174,7 @@ export const seoRoutes = {
     ]
   },
   '/work/payper-ai': {
-    title: 'PayperAI Case Study — Receivables Intelligence & Cash Flow Engine | Yorven',
+    title: 'PayperAI — Receivables Intelligence Platform | Yorven',
     description: 'How Yorven architected a full-stack receivables intelligence platform and automated invoicing ledger to eliminate overdue cash flow delays.',
     canonical: `${SITE_URL}/work/payper-ai`,
     ogType: 'article',
@@ -198,7 +198,7 @@ export const seoRoutes = {
     ]
   },
   '/work/racers-vault': {
-    title: 'Racers Vault Case Study — Multimodal AI Supercar Radar & Digital Garage | Yorven',
+    title: 'Racers Vault — AI Supercar Radar & Digital Garage | Yorven',
     description: 'How Yorven engineered a camera-first mobile experience with multimodal computer vision and GPS-locked supercar spotting telemetry.',
     canonical: `${SITE_URL}/work/racers-vault`,
     ogType: 'article',
@@ -222,7 +222,7 @@ export const seoRoutes = {
     ]
   },
   '/work/aurix': {
-    title: 'Aurix Case Study — High-Throughput Discord Bot & Real-Time Economy | Yorven',
+    title: 'Aurix — Discord Bot & Real-Time Economy | Yorven',
     description: 'How Yorven engineered an event-driven Discord gaming platform with 16-shard clustering, dynamic economy curves, and sub-85ms latency.',
     canonical: `${SITE_URL}/work/aurix`,
     ogType: 'article',
@@ -246,8 +246,8 @@ export const seoRoutes = {
     ]
   },
   '/work/modern-classes': {
-    title: 'Modern Classes — a learning app for board & competitive exams | Yorven',
-    description: 'How Yorven engineered an end-to-end Android learning application on Google Play for Modern Classes coaching institute, featuring live classes and automated mock tests.',
+    title: 'Modern Classes — Board Exam Learning App | Yorven',
+    description: 'How Yorven built an Android learning app on Google Play for Modern Classes, featuring live classes and automated mock tests.',
     canonical: `${SITE_URL}/work/modern-classes`,
     ogType: 'article',
     ogImage: `${SITE_URL}/modern-classes-logo.jpg`,
