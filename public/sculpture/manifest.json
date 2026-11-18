@@ -1,4 +1,0 @@
-{
-  "desktop": { "path": "/sculpture/d/f_%03d.webp", "frames": 215, "width": 1280, "height": 838 },
-  "mobile":  { "path": "/sculpture/m/f_%03d.webp", "frames": 108, "width": 720,  "height": 472 }
-}
