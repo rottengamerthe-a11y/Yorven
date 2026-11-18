@@ -33,6 +33,10 @@ export default defineConfig(({ mode }) => {
                 const parsedBody = body ? JSON.parse(body) : {}
                 const mockReq = { method: req.method, body: parsedBody, headers: req.headers }
                 const mockRes = {
+                  setHeader(name, val) {
+                    res.setHeader(name, val)
+                    return this
+                  },
                   status(code) {
                     res.statusCode = code
                     return this

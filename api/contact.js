@@ -4,96 +4,226 @@
  * Server credentials remain strictly private and are never exposed to clients.
  */
 
-// In-memory rate limiting: ip -> array of timestamps
-const ipRateLimitMap = new Map()
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-const MAX_REQUESTS_PER_WINDOW = 5
+import net from 'node:net';
+import { validateOrigin, validateCsrf, setSecurityHeaders } from './auth/_utils.js';
 
-function isRateLimited(ip) {
-  if (!ip) return false
-  const now = Date.now()
-  const timestamps = (ipRateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
+// In-memory rate limiting: ip -> array of timestamps (fallback when DB is offline)
+const ipRateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function isMemoryRateLimited(ip) {
+  if (!ip) return false;
+  const now = Date.now();
+  const timestamps = (ipRateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
   if (timestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    return true
+    return true;
   }
-  timestamps.push(now)
-  ipRateLimitMap.set(ip, timestamps)
-  return false
+  timestamps.push(now);
+  ipRateLimitMap.set(ip, timestamps);
+  return false;
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+/**
+ * Atomic rate limiting via existing Supabase PostgreSQL infrastructure.
+ * Gracefully falls back to memory if database is unconfigured or function not yet migrated.
+ */
+async function checkAtomicRateLimit(ip) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+  try {
+    const res = await fetch(`${supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/check_and_increment_rate_limit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Profile': 'auth_util',
+        'Accept-Profile': 'auth_util'
+      },
+      body: JSON.stringify({
+        p_ip: ip,
+        p_window_ms: RATE_LIMIT_WINDOW_MS,
+        p_max_requests: MAX_REQUESTS_PER_WINDOW
+      }),
+      signal: AbortSignal.timeout(2500)
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const isAllowed = await res.json();
+    return isAllowed === true;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts and strictly validates the verified client IP using trusted Vercel edge proxy metadata.
+ * Priority:
+ * 1. x-vercel-forwarded-for (Vercel-managed platform forwarded header)
+ * 2. x-real-ip (Single client IP set by Vercel edge)
+ * 3. x-forwarded-for (Overwritten and managed by Vercel edge; first IP is client)
+ * 4. Socket remote address (local development fallback)
+ *
+ * Strict validation: Every candidate address is parsed and verified using built-in node:net.isIP().
+ * Malformed tokens, non-IP strings, and spoof attempts are rejected.
+ * Unresolvable callers deliberately fall back to 'unknown'.
+ */
+export function getTrustedClientIp(req) {
+  const headers = req?.headers || {};
+
+  const parseValidIp = (headerVal) => {
+    if (typeof headerVal !== 'string') return null;
+    const candidate = headerVal.split(',')[0].trim();
+    return net.isIP(candidate) !== 0 ? candidate : null;
+  };
+
+  // 1. Vercel platform-specific forwarded header
+  const vercelForwarded = parseValidIp(headers['x-vercel-forwarded-for']);
+  if (vercelForwarded) return vercelForwarded;
+
+  // 2. Vercel real-ip header
+  const realIp = parseValidIp(headers['x-real-ip']);
+  if (realIp) return realIp;
+
+  // 3. Standard x-forwarded-for (overwritten and managed by Vercel edge)
+  const xForwardedFor = parseValidIp(headers['x-forwarded-for']);
+  if (xForwardedFor) return xForwardedFor;
+
+  // 4. Socket remote address (local development fallback)
+  const socketIp = req?.socket?.remoteAddress;
+  if (typeof socketIp === 'string') {
+    const trimmedSocket = socketIp.trim();
+    if (net.isIP(trimmedSocket) !== 0) {
+      return trimmedSocket;
+    }
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Sanitizes user-supplied text for safe interpolation in Discord embeds.
+ * Suppresses mention injection and zero-width spaces.
+ */
+export function sanitizeForDiscord(text) {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/@everyone/gi, '@\u200Beveryone')
+    .replace(/@here/gi, '@\u200Bhere');
+}
+
+export const MAX_DISCORD_DESC_LENGTH = 4000;
+
+/**
+ * Truncates description exclusively for the Discord notification embed to strictly stay
+ * within Discord's 4,096 embed description limit, while preserving the full inquiry.
+ */
+export function formatDiscordDescription(text) {
+  if (typeof text !== 'string') return '';
+  if (text.length <= MAX_DISCORD_DESC_LENGTH) {
+    return text;
+  }
+  return text.slice(0, MAX_DISCORD_DESC_LENGTH - 20) + '\n... [truncated]';
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default async function handler(req, res) {
+  setSecurityHeaders(res);
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    res.setHeader?.('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Client IP determination
-  const forwarded = req.headers?.['x-forwarded-for']
-  const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress || 'unknown'
-
-  if (isRateLimited(clientIp)) {
-    return res.status(429).json({ error: 'Too many requests. Please wait a few minutes before trying again.' })
+  // 1. Origin and CSRF validation
+  if (!validateOrigin(req)) {
+    return res.status(403).json({ error: 'Invalid or missing origin' });
   }
 
-  const { name, business, email, type, budget, timeline, description, website } = req.body || {}
+  if (!validateCsrf(req)) {
+    return res.status(403).json({ error: 'Missing required custom header' });
+  }
 
-  // 1. Honeypot check for automated spam bots
+  // 2. Client IP determination via trusted Vercel edge headers
+  const clientIp = getTrustedClientIp(req);
+
+  // 3. Rate limiting (Atomic database check with in-memory fallback)
+  const dbAllowed = await checkAtomicRateLimit(clientIp);
+  if (dbAllowed === false) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a few minutes before trying again.' });
+  } else if (dbAllowed === null) {
+    if (isMemoryRateLimited(clientIp)) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a few minutes before trying again.' });
+    }
+  }
+
+  const { name, business, email, type, budget, timeline, description, website } = req.body || {};
+
+  // 4. Honeypot check for automated spam bots
   if (website) {
-    return res.status(200).json({ success: true, message: 'Filtered' })
+    return res.status(200).json({ success: true, message: 'Filtered' });
   }
 
-  // 2. Required fields validation
+  // 5. Required fields validation
   if (!name || typeof name !== 'string' || !name.trim()) {
-    return res.status(400).json({ error: 'Name is required' })
+    return res.status(400).json({ error: 'Name is required' });
   }
   if (!email || typeof email !== 'string' || !email.trim()) {
-    return res.status(400).json({ error: 'Email is required' })
+    return res.status(400).json({ error: 'Email is required' });
   }
   if (!description || typeof description !== 'string' || !description.trim()) {
-    return res.status(400).json({ error: 'Description is required' })
+    return res.status(400).json({ error: 'Description is required' });
   }
 
-  const cleanName = name.trim()
-  const cleanEmail = email.trim()
-  const cleanDesc = description.trim()
-  const cleanBusiness = (business || '').trim()
-  const cleanType = (type || 'Custom Software').trim()
-  const cleanBudget = (budget || 'Not specified').trim()
-  const cleanTimeline = (timeline || 'Not specified').trim()
+  const cleanName = sanitizeForDiscord(name.trim());
+  const cleanEmail = email.trim();
+  const cleanDesc = sanitizeForDiscord(description.trim());
+  const cleanBusiness = sanitizeForDiscord((business || '').trim());
+  const cleanType = (type || 'Custom Software').trim();
+  const cleanBudget = (budget || 'Not specified').trim();
+  const cleanTimeline = (timeline || 'Not specified').trim();
 
-  // 3. Format and length bounds
+  // 6. Format and length bounds
   if (!EMAIL_REGEX.test(cleanEmail)) {
-    return res.status(400).json({ error: 'Invalid email address format' })
+    return res.status(400).json({ error: 'Invalid email address format' });
   }
   if (cleanName.length > 100) {
-    return res.status(400).json({ error: 'Name exceeds maximum length of 100 characters' })
+    return res.status(400).json({ error: 'Name exceeds maximum length of 100 characters' });
   }
   if (cleanEmail.length > 120) {
-    return res.status(400).json({ error: 'Email exceeds maximum length of 120 characters' })
+    return res.status(400).json({ error: 'Email exceeds maximum length of 120 characters' });
   }
   if (cleanBusiness.length > 100) {
-    return res.status(400).json({ error: 'Business name exceeds maximum length of 100 characters' })
+    return res.status(400).json({ error: 'Business name exceeds maximum length of 100 characters' });
   }
   if (cleanDesc.length > 5000) {
-    return res.status(400).json({ error: 'Description exceeds maximum length of 5000 characters' })
+    return res.status(400).json({ error: 'Description exceeds maximum length of 5000 characters' });
   }
 
-  const discordUrl = process.env.DISCORD_WEBHOOK_URL
+  const discordUrl = process.env.DISCORD_WEBHOOK_URL;
 
   if (!discordUrl) {
-    console.warn('[Contact API] DISCORD_WEBHOOK_URL not configured on server.')
-    return res.status(500).json({ error: 'Studio alert integration not configured. Please email projects@yorven.in.' })
+    console.warn('[Contact API] DISCORD_WEBHOOK_URL not configured on server.');
+    return res.status(500).json({ error: 'Studio alert integration not configured. Please email projects@yorven.in.' });
   }
 
   try {
     const discordPayload = {
       username: 'Yorven Studio Leads',
       content: '🚨 **New Lead Alert: Call Request Received!**',
+      // Strict mention suppression: never ping @everyone, @here, roles, or users
+      allowed_mentions: { parse: [] },
       embeds: [
         {
           title: `New Project Booking: ${cleanName}`,
-          description: cleanDesc,
+          description: formatDiscordDescription(cleanDesc),
           color: 556104, // #087c48
           fields: [
             { name: '👤 Client Name', value: cleanName, inline: true },
@@ -107,23 +237,23 @@ export default async function handler(req, res) {
           timestamp: new Date().toISOString()
         }
       ]
-    }
+    };
 
     const discordRes = await fetch(discordUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(discordPayload)
-    })
+    });
 
     if (discordRes.ok || discordRes.status === 204) {
-      return res.status(200).json({ success: true, message: 'Studio notification recorded' })
+      return res.status(200).json({ success: true, message: 'Studio notification recorded' });
     }
 
-    console.error('[Contact API] Discord webhook returned non-OK status:', discordRes.status)
-    return res.status(502).json({ error: 'Studio notification delivery failed.' })
+    console.error('[Contact API] Discord webhook returned non-OK status:', discordRes.status);
+    return res.status(502).json({ error: 'Studio notification delivery failed.' });
   } catch (err) {
     // Safe logging: Never log raw URL or credential tokens
-    console.error('[Contact API] Discord dispatch network error:', err.message)
-    return res.status(500).json({ error: 'Network error connecting to studio notification channel.' })
+    console.error('[Contact API] Discord dispatch network error:', err.message);
+    return res.status(500).json({ error: 'Network error connecting to studio notification channel.' });
   }
 }

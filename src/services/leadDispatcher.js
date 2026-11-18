@@ -148,7 +148,8 @@ export async function dispatchLead(formData) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-Requested-With': 'Yorven-Control'
           },
           body: JSON.stringify(formData)
         })
