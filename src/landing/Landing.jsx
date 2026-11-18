@@ -17,6 +17,7 @@ import {
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
 import { modernClasses } from '../data/site'
 import { SafeImage } from '../components/ui/SafeImage'
+import { SculptureCanvas } from '../components/ui/SculptureCanvas'
 import './landing.css'
 
 /* ---------- helpers ---------- */
@@ -65,7 +66,9 @@ function Heading({ lines, className = '' }) {
 export function Hero() {
   const heroLines = HERO.lines
   const perLine = Math.max(...heroLines.map((l) => l.length))
-  return <section className="lp-hero-wrap" data-theme="teal">
+  const heroWrapRef = useRef(null)
+
+  return <section className="lp-hero-wrap" data-theme="teal" ref={heroWrapRef}>
     <div className="lp-sky" aria-hidden="true">
       <div className="lp-sky-glow" />
       <div className="lp-clouds lp-clouds-far"><div className="lp-cloud-plane"><div className="lp-cloud-tex" /></div></div>
@@ -93,97 +96,7 @@ export function Hero() {
           {HERO.trust.map((item) => <li key={item}><Check size={15} strokeWidth={2.5} />{item}</li>)}
         </ul>
       </div>
-      <div className="hero-art reveal" aria-label="Real digital products engineered by Yorven">
-        <div className="hero-canvas-grid" aria-hidden="true" />
-
-        {/* 1. Desktop Dashboard: ProofPay (PayperAI) */}
-        <div className="hero-card hero-card-desktop">
-          <div className="h-card-bar">
-            <span className="dot dot-teal" />
-            <span className="dot dot-teal" />
-            <span className="dot dot-teal" />
-            <span className="h-bar-url">proofpay.ai</span>
-            <span className="h-bar-badge">Live System</span>
-          </div>
-          <div className="h-desktop-content">
-            <div className="h-desktop-kpis">
-              <div className="h-dkpi">
-                <small>OUTSTANDING</small>
-                <strong>$34,500</strong>
-              </div>
-              <div className="h-dkpi">
-                <small>AUTO-RECOVERED</small>
-                <strong className="text-green">$104,200</strong>
-              </div>
-            </div>
-            <div className="h-desktop-rows">
-              <div className="h-drow alert">
-                <div className="h-drow-meta">
-                  <b>Apex Logistics Ltd</b>
-                  <small>INV-041 · 16d overdue</small>
-                </div>
-                <span className="h-drow-amt">$8,500</span>
-              </div>
-              <div className="h-drow">
-                <div className="h-drow-meta">
-                  <b>Kinetix Cloud Corp</b>
-                  <small>INV-039 · Due in 3d</small>
-                </div>
-                <span className="h-drow-amt">$14,200</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Mobile Device: Racers Vault (Porsche 911 GT3 R Grello) */}
-        <div className="hero-card hero-card-phone">
-          <div className="h-phone-notch"><span /></div>
-          <div className="h-phone-screen">
-            <SafeImage
-              src="/projects/racers-vault/porsche-gt3r-grello.webp"
-              alt="Porsche 911 GT3 R Grello in Racers Vault"
-              className="h-phone-img"
-              width="576"
-              height="930"
-              aspectRatio="576 / 930"
-            />
-          </div>
-        </div>
-
-        {/* 3. Bot Platform: Aurix Discord Engine (Replaces bottom-left panel) */}
-        <div className="hero-panel panel-aurix">
-          <div className="h-bot-id">
-            <div className="h-bot-avatar-wrap">
-              <SafeImage
-                src="/projects/aurix/aurix-flame-avatar.webp"
-                alt="Aurix"
-                className="h-bot-avatar-img"
-                width="460"
-                height="460"
-                aspectRatio="1 / 1"
-              />
-            </div>
-            <div className="h-bot-title-row">
-              <strong>Aurix</strong>
-              <span className="h-bot-app">APP</span>
-            </div>
-            <span className="h-bot-shards">● 16 Shards</span>
-          </div>
-          <div className="h-bot-embed">
-            <div className="h-embed-title">
-              <span className="h-spin-icon">✨</span>
-              <b>Spin Complete • SUCCESS</b>
-            </div>
-            <p className="h-embed-payout">
-              Gained <b>154 aura</b> & <b>103 XP</b>
-            </p>
-            <div className="h-embed-row">
-              <span className="h-cmd-pill">/spin</span>
-              <span className="h-wallet-note">174,381 aura</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SculptureCanvas heroWrapRef={heroWrapRef} />
       <div className="hero-scroll"><span>Scroll to explore</span><div className="scroll-line" /></div>
     </div>
   </section>

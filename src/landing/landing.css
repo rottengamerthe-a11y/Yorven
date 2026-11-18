@@ -13,21 +13,36 @@
 .lp-dark h2 span:nth-child(2) { color: var(--mint); }
 .lp-light h2 span:first-child { color: var(--teal); }
 
-/* Glass Sculpture Stage & Radial Glow */
-.sculpture-radial-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90vw;
-  height: 90vh;
-  max-width: 1100px;
-  max-height: 850px;
-  border-radius: 50%;
+/* Glass Sculpture Hero Object */
+.hero-sculpture {
+  position: relative;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  background: radial-gradient(circle at center, rgba(215, 237, 131, 0.14) 0%, rgba(14, 76, 70, 0.28) 42%, rgba(8, 45, 44, 0) 72%);
-  filter: blur(50px);
-  will-change: transform;
+  user-select: none;
+  isolation: isolate;
+}
+
+.sculpture-backing {
+  position: absolute;
+  inset: 0;
+  background-color: #082d2c;
+  pointer-events: none;
+  z-index: 1;
+  -webkit-mask-image: radial-gradient(ellipse 65% 60% at 50% 50%, #000000 48%, rgba(0, 0, 0, 0.7) 72%, transparent 100%);
+  mask-image: radial-gradient(ellipse 65% 60% at 50% 50%, #000000 48%, rgba(0, 0, 0, 0.7) 72%, transparent 100%);
+}
+
+.sculpture-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
+  mix-blend-mode: screen;
+  filter: contrast(1.1);
+  opacity: 1;
+  pointer-events: none;
 }
 
 /* Landing sections layering over sculpture stage */
@@ -50,11 +65,34 @@
 .motion-ready .lp-grid > .lp-card.stagger-reveal,
 .motion-ready .lp-faq-item.stagger-reveal { transition-delay: calc(var(--i, 0) * 80ms); }
 
-/* ---------- 1. hero: cloud sky ---------- */
-.lp-hero-wrap { position: relative; isolation: isolate; overflow: hidden; margin-top: -80px; padding-top: 80px; padding-bottom: 60px; margin-bottom: -1px; color: var(--cream); }
+/* ---------- 1. hero: cloud sky & foreground sculpture ---------- */
+.lp-hero-wrap {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: -80px;
+  padding-top: 80px;
+  padding-bottom: 60px;
+  margin-bottom: -1px;
+  color: var(--cream);
+  min-height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 /* dissolve the sky into the dark section below, so there is no visible edge */
 .lp-hero-wrap::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgba(8, 45, 44, 0) 0%, rgba(8, 45, 44, .2) 30%, rgba(8, 45, 44, .6) 62%, #082d2c 100%); }
-@media (max-width: 900px) { .lp-hero-wrap { margin-top: -64px; padding-top: 64px; padding-bottom: 50px; } .lp-hero-wrap::after { height: 260px; } }
+@media (max-width: 900px) {
+  .lp-hero-wrap {
+    margin-top: -64px;
+    padding-top: 64px;
+    padding-bottom: 32px;
+    min-height: 100dvh;
+    justify-content: flex-start;
+  }
+  .lp-hero-wrap::after { height: 260px; }
+}
 
 /* the sky: darkest overhead, brightest at the horizon (bottom), as seen looking up from the ground */
 .lp-sky { position: absolute; inset: 0; z-index: -1; background: linear-gradient(to bottom, #04201f 0%, #08302e 30%, #0d4543 58%, #1b6a63 84%, #4f9e90 100%); }
@@ -88,9 +126,68 @@
 .lp-hero-wrap .lp-trust li { color: #eaf2d8; }
 .lp-hero-wrap .hero-scroll { color: var(--mint); }
 .lp-hero-wrap .scroll-line { background: rgba(201, 235, 170, .5); }
-.lp-hero-wrap .hero-art { box-shadow: 0 30px 60px rgba(0, 0, 0, .22); outline: 1px solid rgba(215, 237, 131, .2); outline-offset: -1px; }
+@media (min-width: 901px) {
+  .hero.lp-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 3vw;
+    min-height: calc(100dvh - 80px);
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .hero.lp-hero .hero-copy {
+    position: relative;
+    z-index: 10;
+  }
+  .hero.lp-hero .hero-sculpture {
+    position: relative;
+    width: 55vw;
+    max-width: 780px;
+    height: min(80dvh, 740px);
+    justify-self: end;
+    opacity: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+}
 
-@media (min-width: 901px) { .lp-hero { grid-template-columns: minmax(0, 1.2fr) minmax(380px, .8fr); } }
+@media (max-width: 900px) {
+  .hero.lp-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: calc(100dvh - 64px);
+    gap: 16px;
+    padding-top: 8px;
+    padding-bottom: 32px;
+    box-sizing: border-box;
+  }
+  .hero.lp-hero .hero-sculpture {
+    order: 1;
+    width: 100%;
+    height: 48dvh;
+    max-height: 50dvh;
+    min-height: 260px;
+    position: relative;
+    margin: 0 auto;
+    flex-shrink: 0;
+    opacity: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+  .hero.lp-hero .hero-copy {
+    order: 2;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    padding-top: 0;
+  }
+  .lp-hero-wrap .hero-scroll {
+    display: none;
+  }
+}
+
 .lp-hero h1 { font-size: clamp(34px, 3.9vw, 58px); }
 @media (min-width: 1001px) { .lp-hero .hero-line { white-space: nowrap; } }
 .lp-hero .lede { max-width: 46ch; }

@@ -11,7 +11,6 @@ import { ArticleProse } from './components/insights/ArticleProse'
 import { TableOfContents } from './components/insights/TableOfContents'
 import { assembleParticles } from './components/particleAssemble'
 import './styles.css'
-import { SculptureCanvas } from './components/ui/SculptureCanvas'
 import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
@@ -622,7 +621,6 @@ function Home() {
   useScrollMotion()
   return (
     <div className="home-page-wrap">
-      <SculptureCanvas />
       <Hero />
       <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
       <Problem />

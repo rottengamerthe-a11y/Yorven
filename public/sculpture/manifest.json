@@ -1,4 +1,5 @@
 {
-  "desktop": { "path": "/sculpture/d/f_%03d.webp", "frames": 215, "width": 1280, "height": 838 },
-  "mobile":  { "path": "/sculpture/m/f_%03d.webp", "frames": 108, "width": 720,  "height": 472 }
+  "desktop": { "path": "/sculpture/d/f_%03d.webp", "frames": 169, "width": 1280, "height": 838 },
+  "mobile":  { "path": "/sculpture/m/f_%03d.webp", "frames": 85, "width": 720,  "height": 472 },
+  "note": "Trimmed: starts at 1.9s of the source so motion begins immediately. Last frames hold the light sweep."
 }
