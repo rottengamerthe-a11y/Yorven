@@ -4,6 +4,35 @@ import { ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import '../components/dashboard.css';
 
+/**
+ * Safely converts QR code SVG/data strings into sandboxed image URLs.
+ * Strictly eliminates dangerouslySetInnerHTML while preventing script or handler execution.
+ */
+function toSafeQrImageUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('<svg') && trimmed.endsWith('</svg>')) {
+    const lower = trimmed.toLowerCase();
+    if (
+      lower.includes('<script') ||
+      lower.includes('<foreignobject') ||
+      lower.includes('<iframe') ||
+      lower.includes('<object') ||
+      lower.includes('<embed') ||
+      lower.includes('javascript:') ||
+      /\son[a-z]+\s*=/i.test(trimmed)
+    ) {
+      console.warn('Rejected unsafe SVG markup in QR code');
+      return null;
+    }
+    return `data:image/svg+xml;utf8,${encodeURIComponent(trimmed)}`;
+  }
+  return null;
+}
+
 export function DashboardEnroll() {
   const { authState, authError, cancelMfa } = useAuth(); // reuse auth context for cancel handling
   const [email, setEmail] = useState('');
@@ -123,10 +152,18 @@ export function DashboardEnroll() {
         {step === 'qr' && (
           <>
             <p>Scan this QR code with your authenticator app (e.g., Google Authenticator, Authy).</p>
-            {qrCode ? (
-              <div dangerouslySetInnerHTML={{ __html: qrCode }} />
+            {toSafeQrImageUrl(qrCode) ? (
+              <div className="qr-code-wrapper" style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+                <img
+                  src={toSafeQrImageUrl(qrCode)}
+                  alt="TOTP QR Code"
+                  width="200"
+                  height="200"
+                  style={{ background: '#ffffff', padding: '12px', borderRadius: '8px' }}
+                />
+              </div>
             ) : (
-              <p>(QR code not provided – you may need to copy the secret manually.)</p>
+              <p>(QR code not provided or invalid – you may need to copy the secret manually.)</p>
             )}
             <form onSubmit={handleVerify} className="auth-form" style={{ marginTop: '16px' }}>
               <div className="form-group">
