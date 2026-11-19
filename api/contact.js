@@ -8,30 +8,71 @@ import net from 'node:net';
 import { validateOrigin, validateCsrf, setSecurityHeaders } from './auth/_utils.js';
 
 // In-memory rate limiting: ip -> array of timestamps (fallback when DB is offline)
-const ipRateLimitMap = new Map();
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_REQUESTS_PER_WINDOW = 5;
+export const ipRateLimitMap = new Map();
+export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+export const MAX_REQUESTS_PER_WINDOW = 5;
+export const MAX_MEMORY_ENTRIES = 5000;
 
-function isMemoryRateLimited(ip) {
+/**
+ * Prunes expired timestamp entries from the in-memory fallback map.
+ */
+export function pruneExpiredMemoryEntries(now = Date.now()) {
+  for (const [key, timestamps] of ipRateLimitMap.entries()) {
+    const active = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+    if (active.length === 0) {
+      ipRateLimitMap.delete(key);
+    }
+  }
+}
+
+export function isMemoryRateLimited(ip) {
   if (!ip) return false;
   const now = Date.now();
-  const timestamps = (ipRateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  const existing = ipRateLimitMap.get(ip);
+  const timestamps = (existing || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+
   if (timestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    // Refresh LRU position without growing the array beyond MAX_REQUESTS_PER_WINDOW
+    ipRateLimitMap.delete(ip);
+    ipRateLimitMap.set(ip, timestamps);
     return true;
   }
+
+  // Not rate limited: add current timestamp (strictly bounded to <= MAX_REQUESTS_PER_WINDOW)
   timestamps.push(now);
+
+  // If map is at maximum capacity and this is a new IP, prune expired entries first
+  if (!ipRateLimitMap.has(ip) && ipRateLimitMap.size >= MAX_MEMORY_ENTRIES) {
+    pruneExpiredMemoryEntries(now);
+  }
+
+  // If still at capacity, evict the oldest (LRU) entry
+  if (!ipRateLimitMap.has(ip) && ipRateLimitMap.size >= MAX_MEMORY_ENTRIES) {
+    const oldestKey = ipRateLimitMap.keys().next().value;
+    if (oldestKey !== undefined) {
+      ipRateLimitMap.delete(oldestKey);
+    }
+  }
+
+  // Refresh LRU order with updated timestamps
+  ipRateLimitMap.delete(ip);
   ipRateLimitMap.set(ip, timestamps);
   return false;
 }
 
 /**
  * Atomic rate limiting via existing Supabase PostgreSQL infrastructure.
- * Gracefully falls back to memory if database is unconfigured or function not yet migrated.
+ * Gracefully falls back to memory if database is unconfigured, unreachable, or returns an error.
+ * Emits structured, sanitized telemetry on fallback without logging sensitive data.
  */
-async function checkAtomicRateLimit(ip) {
+export async function checkAtomicRateLimit(ip) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) {
+    console.warn('[Contact API] Rate limit check failed, falling back to memory:', JSON.stringify({
+      event: 'contact_rate_limit_fallback',
+      category: 'configuration_error'
+    }));
     return null;
   }
   try {
@@ -51,12 +92,53 @@ async function checkAtomicRateLimit(ip) {
       }),
       signal: AbortSignal.timeout(2500)
     });
+
     if (!res.ok) {
+      let code;
+      try {
+        const errorBody = await res.json();
+        if (errorBody && typeof errorBody.code === 'string' && /^[A-Za-z0-9]{1,10}$/.test(errorBody.code)) {
+          code = errorBody.code;
+        }
+      } catch {
+        // Body not JSON or unreadable
+      }
+
+      console.warn('[Contact API] Rate limit check failed, falling back to memory:', JSON.stringify({
+        event: 'contact_rate_limit_fallback',
+        category: 'http_error',
+        status: res.status,
+        ...(code ? { code } : {})
+      }));
       return null;
     }
-    const isAllowed = await res.json();
-    return isAllowed === true;
-  } catch {
+
+    let isAllowed;
+    try {
+      isAllowed = await res.json();
+    } catch {
+      console.warn('[Contact API] Rate limit check failed, falling back to memory:', JSON.stringify({
+        event: 'contact_rate_limit_fallback',
+        category: 'malformed_response'
+      }));
+      return null;
+    }
+
+    if (typeof isAllowed !== 'boolean') {
+      console.warn('[Contact API] Rate limit check failed, falling back to memory:', JSON.stringify({
+        event: 'contact_rate_limit_fallback',
+        category: 'malformed_response'
+      }));
+      return null;
+    }
+
+    return isAllowed;
+  } catch (err) {
+    const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+    console.warn('[Contact API] Rate limit check failed, falling back to memory:', JSON.stringify({
+      event: 'contact_rate_limit_fallback',
+      category: isTimeout ? 'timeout' : 'network_error'
+    }));
     return null;
   }
 }
@@ -242,7 +324,8 @@ export default async function handler(req, res) {
     const discordRes = await fetch(discordUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(discordPayload)
+      body: JSON.stringify(discordPayload),
+      signal: AbortSignal.timeout(5000)
     });
 
     if (discordRes.ok || discordRes.status === 204) {
@@ -252,8 +335,13 @@ export default async function handler(req, res) {
     console.error('[Contact API] Discord webhook returned non-OK status:', discordRes.status);
     return res.status(502).json({ error: 'Studio notification delivery failed.' });
   } catch (err) {
-    // Safe logging: Never log raw URL or credential tokens
-    console.error('[Contact API] Discord dispatch network error:', err.message);
+    const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+    if (isTimeout) {
+      console.error('[Contact API] Discord dispatch timeout error');
+      return res.status(504).json({ error: 'Studio notification delivery timed out.' });
+    }
+    // Safe logging: Never log raw URL, credential tokens, or sensitive error internals
+    console.error('[Contact API] Discord dispatch network error');
     return res.status(500).json({ error: 'Network error connecting to studio notification channel.' });
   }
 }
