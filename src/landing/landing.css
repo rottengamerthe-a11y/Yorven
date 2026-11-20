@@ -73,59 +73,69 @@
 
 .hero-figma-section {
   position: relative;
-  isolation: isolate;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   width: 100%;
   max-width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
   margin-top: calc(-80px - env(safe-area-inset-top, 0px));
   padding-top: calc(80px + env(safe-area-inset-top, 0px));
-  background-color: var(--next-section-bg, #082d2c);
-  background-image: linear-gradient(to bottom, #0a1210 0%, #0a1210 60%, var(--next-section-bg, #082d2c) 100%);
+  padding-bottom: clamp(120px, 16vh, 200px);
+  background: transparent;
   color: #f5f7f6;
   display: flex;
   flex-direction: column;
   justify-content: center;
   border-bottom: none !important;
   margin-bottom: 0 !important;
+  z-index: 1;
 }
 
-/* Dissolve shader canvas wrapper into next-section background */
+/* Extend animated shader background downward into next section with gentle curved dissolve */
 .hero-figma-section .gb-root {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
-}
-
-/* Eased bottom fade element inside hero (z-index 2 above canvas 0, below content 3) */
-.hero-bottom-fade {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: -1px;
-  height: clamp(260px, 38vh, 440px);
+  bottom: calc(-1 * clamp(300px, 40vh, 420px));
+  width: 100%;
+  height: auto;
   pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: radial-gradient(
+    ellipse 115% 100% at 50% 0%,
+    #000 0%,
+    #000 76%,
+    rgba(0, 0, 0, 0.82) 82%,
+    rgba(0, 0, 0, 0.5) 89%,
+    rgba(0, 0, 0, 0.18) 95%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 115% 100% at 50% 0%,
+    #000 0%,
+    #000 76%,
+    rgba(0, 0, 0, 0.82) 82%,
+    rgba(0, 0, 0, 0.5) 89%,
+    rgba(0, 0, 0, 0.18) 95%,
+    transparent 100%
+  );
+}
+
+.hero-bottom-fade {
+  display: none !important;
+}
+
+#proof {
+  background: transparent !important;
+  position: relative;
   z-index: 2;
-  background: linear-gradient(
-    to bottom,
-    rgba(8, 45, 44, 0) 0%,
-    rgba(8, 45, 44, 0.08) 15%,
-    rgba(8, 45, 44, 0.24) 30%,
-    rgba(8, 45, 44, 0.48) 48%,
-    rgba(8, 45, 44, 0.72) 66%,
-    rgba(8, 45, 44, 0.9) 82%,
-    var(--next-section-bg, #082d2c) 100%
-  );
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--next-section-bg, #082d2c) 8%, transparent) 15%,
-    color-mix(in srgb, var(--next-section-bg, #082d2c) 24%, transparent) 30%,
-    color-mix(in srgb, var(--next-section-bg, #082d2c) 48%, transparent) 48%,
-    color-mix(in srgb, var(--next-section-bg, #082d2c) 72%, transparent) 66%,
-    color-mix(in srgb, var(--next-section-bg, #082d2c) 90%, transparent) 82%,
-    var(--next-section-bg, #082d2c) 100%
-  );
+}
+
+#proof .container {
+  position: relative;
+  z-index: 5;
 }
 
 /* 2-Column Hero Container matching 1440px reference proportions (z-index 3 above fade 2) */
@@ -135,22 +145,20 @@
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 32px 48px 40px 64px;
+  padding: 32px 48px 0 64px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: calc(100vh - 80px);
 }
 
-/* Left Column: ~55% width, vertically distributed */
+/* Left Column: ~55% width, vertically centered */
 .hero-figma-left {
   flex: 0 0 54%;
   max-width: 58%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: calc(100vh - 160px);
+  justify-content: center;
   padding-block: 8px;
   box-sizing: border-box;
 }
@@ -298,7 +306,7 @@
   text-transform: uppercase;
   color: #b8c2be;
   opacity: 0.7;
-  margin-top: auto;
+  margin-top: clamp(24px, 4.5vh, 48px);
 }
 
 .hero-scroll-arrow-svg {
@@ -313,6 +321,8 @@
   align-items: center;
   justify-content: flex-end;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Floating animation strictly on the outer container */
@@ -368,7 +378,7 @@
   background: radial-gradient(circle at 60% 40%, #0d2824 0%, #061917 70%, #041210 100%);
   border-radius: 40px;
   border: 1px solid rgba(45, 212, 191, 0.18);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   isolation: isolate;
   box-sizing: border-box;
 }
@@ -383,10 +393,37 @@
   border-radius: 40px;
 }
 
-/* Base Card transition */
+/* Base Card transition & grayscale font smoothing */
 .hero-figma-right .hero-card {
   position: absolute;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility;
+}
+
+.hero-figma-right .hero-card *,
+.hero-figma-right .panel-aurix * {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Text elements in cards must have no background */
+.hero-figma-right .h-bar-url,
+.hero-figma-right .h-dkpi small,
+.hero-figma-right .h-dkpi strong,
+.hero-figma-right .h-drow-meta b,
+.hero-figma-right .h-drow-meta small,
+.hero-figma-right .h-drow-amt,
+.hero-figma-right .h-bot-title-row strong,
+.hero-figma-right .h-bot-shards,
+.hero-figma-right .h-embed-title,
+.hero-figma-right .h-embed-title b,
+.hero-figma-right .h-embed-payout,
+.hero-figma-right .h-embed-payout b,
+.hero-figma-right .h-wallet-note {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* 1. Desktop Dashboard: ProofPay (Top-Left) */
@@ -401,7 +438,7 @@
   background: #fbf9f4;
   color: var(--teal);
   border-radius: 2px 2px 2px 18px;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.28);
   transform: rotate(-3deg) !important;
   padding: 16px 18px;
   z-index: 2;
@@ -412,7 +449,7 @@
 .hero-figma-right .hero-card-desktop:hover {
   transform: rotate(-1deg) scale(1.02) !important;
   z-index: 5;
-  box-shadow: 0 30px 65px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
 }
 
 .hero-figma-right .h-card-bar {
@@ -442,10 +479,9 @@
   margin-left: auto;
   font: 700 13px/1.2 var(--sans);
   color: #087c48;
-  background: rgba(8, 124, 72, 0.12);
-  border: 1px solid rgba(8, 124, 72, 0.25);
-  padding: 3px 7px;
-  border-radius: 4px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
   text-transform: uppercase;
 }
 
@@ -595,7 +631,7 @@
   border: 1px solid rgba(138, 147, 240, 0.32);
   border-radius: 8px;
   padding: 13px 15px;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   transform: rotate(-3deg) !important;
@@ -608,6 +644,7 @@
   transform: rotate(-1deg) scale(1.02) !important;
   z-index: 6;
   border-color: rgba(138, 147, 240, 0.55);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
 .hero-figma-right .h-bot-id {
@@ -783,6 +820,25 @@
 }
 
 @media (max-width: 640px) {
+  .hero-figma-section .gb-root {
+    bottom: -200px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 135% 100% at 50% 0%,
+      #000 0%,
+      #000 72%,
+      rgba(0, 0, 0, 0.75) 82%,
+      rgba(0, 0, 0, 0.3) 92%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 135% 100% at 50% 0%,
+      #000 0%,
+      #000 72%,
+      rgba(0, 0, 0, 0.75) 82%,
+      rgba(0, 0, 0, 0.3) 92%,
+      transparent 100%
+    );
+  }
   .hero-figma-container {
     padding: 20px 16px 0;
     gap: 40px;

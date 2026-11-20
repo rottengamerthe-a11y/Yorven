@@ -97,24 +97,22 @@ export function Hero() {
       {/* 1) shadcn.io Gradient WebGL2 Animated Shader Background */}
       <GradientBackground
         type="linear"
-        angle={135}
-        colors={["#b9c4bf", "#1d3b35", "#0a1210", "#0f2a25"]}
-        scale={1}
-        warp={1}
-        softness={1}
-        flow={0.4}
-        speed={0.6}
-        grain={0.45}
-        contrast={0.8}
-        intensity={1.0}
+        angle={118}
+        colors={["#0a1210", "#0f3b33", "#16b5a3", "#12372f", "#3fbf4a", "#0f2a25", "#7f93d6", "#0a1210"]}
+        scale={1.3}
+        warp={1.4}
+        detail={0.55}
+        softness={0.85}
+        contrast={1.25}
+        intensity={1.25}
+        flow={1.2}
+        speed={1.2}
+        grain={0.4}
         interactive={true}
         quality={0.75}
         backgroundColor="#0a1210"
         fallback="radial-gradient(circle at 15% 10%, rgba(185,196,191,0.13), transparent 50%), #0a1210"
       />
-
-      {/* 2) Bottom fade element dissolving into Shipped Work */}
-      <div className="hero-bottom-fade" aria-hidden="true" />
 
       <div className="hero-figma-container">
         {/* Left Column (about 55% width, vertically distributed) */}
