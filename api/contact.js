@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests. Please wait a few minutes before trying again.' })
   }
 
-  const { name, business, email, type, budget, timeline, description, website } = req.body || {}
+  const { name, business, country, email, type, budget, timeline, description, website } = req.body || {}
 
   // 1. Honeypot check for automated spam bots
   if (website) {
@@ -58,6 +58,7 @@ export default async function handler(req, res) {
   const cleanEmail = email.trim()
   const cleanDesc = description.trim()
   const cleanBusiness = (business || '').trim()
+  const cleanCountry = (country || 'International').trim()
   const cleanType = (type || 'Custom Software').trim()
   const cleanBudget = (budget || 'Not specified').trim()
   const cleanTimeline = (timeline || 'Not specified').trim()
@@ -98,6 +99,7 @@ export default async function handler(req, res) {
           fields: [
             { name: '👤 Client Name', value: cleanName, inline: true },
             { name: '🏢 Venture / Business', value: cleanBusiness || 'Not specified', inline: true },
+            { name: '🌍 Country / Location', value: cleanCountry, inline: true },
             { name: '✉️ Work Email', value: `[${cleanEmail}](mailto:${cleanEmail})`, inline: true },
             { name: '🛠️ Project Focus', value: cleanType, inline: true },
             { name: '💰 Budget Bracket', value: cleanBudget, inline: true },
