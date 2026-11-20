@@ -1,0 +1,64 @@
+/* Scoped styles for standalone WebGL GradientBackground */
+
+.gb-root {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.gb-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.gb-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+}
+
+/* Fallback visibility during initial WebGL compile or when unsupported */
+.gb-root[data-state="loading"] .gb-fallback,
+.gb-root[data-state="unsupported"] .gb-fallback {
+  opacity: 1;
+}
+
+/* Edge fades */
+.gb-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
+}
+
+.gb-fade-top {
+  -webkit-mask-image: linear-gradient(to top, black 45%, transparent 100%);
+  mask-image: linear-gradient(to top, black 45%, transparent 100%);
+}
+
+.gb-fade-left {
+  -webkit-mask-image: linear-gradient(to left, black 45%, transparent 100%);
+  mask-image: linear-gradient(to left, black 45%, transparent 100%);
+}
+
+.gb-fade-right {
+  -webkit-mask-image: linear-gradient(to right, black 45%, transparent 100%);
+  mask-image: linear-gradient(to right, black 45%, transparent 100%);
+}
+
+.gb-fade-radial {
+  -webkit-mask-image: radial-gradient(farthest-side, black 45%, transparent 100%);
+  mask-image: radial-gradient(farthest-side, black 45%, transparent 100%);
+}
