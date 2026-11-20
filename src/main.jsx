@@ -11,6 +11,9 @@ import { ArticleProse } from './components/insights/ArticleProse'
 import { TableOfContents } from './components/insights/TableOfContents'
 import { assembleParticles } from './components/particleAssemble'
 import './styles.css'
+import { MotionHighlight, MotionHighlightItem } from './components/ui/motion-highlight'
+import { ButtonRounded } from './components/ui/button-rounded'
+import { CountryCombobox } from './components/ui/country-combobox'
 import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
 import { dispatchLead } from './services/leadDispatcher'
 import SEOHead from './components/seo/SEOHead'
@@ -415,7 +418,18 @@ function Layout({ children }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
   const triggerRef = useRef(null)
+  const location = useLocation()
   const close = () => { setOpen(false); triggerRef.current?.focus() }
+
+  const activeRoute = location.pathname.startsWith('/services')
+    ? 'services'
+    : location.pathname.startsWith('/work')
+    ? 'work'
+    : location.pathname.startsWith('/insights')
+    ? 'insights'
+    : location.pathname.startsWith('/about')
+    ? 'about'
+    : null
 
   useEffect(() => {
     if (!open) return undefined
@@ -475,34 +489,51 @@ function Layout({ children }) {
               <X size={20} />
             </button>
           </div>
-          <NavLink
-            to="/services"
-            onClick={(e) => {
-              setOpen(false)
-              if (window.location.pathname === '/') {
-                const el = document.getElementById('services')
-                if (el) {
-                  e.preventDefault()
-                  if (window.location.hash !== '#services') {
-                    window.history.pushState(null, '', '/#services')
+          <MotionHighlight activeValue={activeRoute} className="nav-highlight-group">
+            <MotionHighlightItem value="services">
+              <NavLink
+                to="/services"
+                onClick={(e) => {
+                  setOpen(false)
+                  if (window.location.pathname === '/') {
+                    const el = document.getElementById('services')
+                    if (el) {
+                      e.preventDefault()
+                      if (window.location.hash !== '#services') {
+                        window.history.pushState(null, '', '/#services')
+                      }
+                      if (window.__lenis) {
+                        window.__lenis.scrollTo(el, { offset: -96, duration: 1.2 })
+                      } else {
+                        el.scrollIntoView({ behavior: 'smooth' })
+                      }
+                    }
                   }
-                  if (window.__lenis) {
-                    window.__lenis.scrollTo(el, { offset: -96, duration: 1.2 })
-                  } else {
-                    el.scrollIntoView({ behavior: 'smooth' })
-                  }
-                }
-              }
-            }}
+                }}
+              >
+                Services
+              </NavLink>
+            </MotionHighlightItem>
+            <MotionHighlightItem value="work">
+              <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
+            </MotionHighlightItem>
+            <MotionHighlightItem value="insights">
+              <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
+            </MotionHighlightItem>
+            <MotionHighlightItem value="about">
+              <NavLink to="/about" onClick={() => setOpen(false)}>About</NavLink>
+            </MotionHighlightItem>
+          </MotionHighlight>
+          <ButtonRounded
+            variant="accent"
+            size="sm"
+            to="/contact"
+            arrow="up-right"
+            className="nav-contact-btn"
+            onClick={() => setOpen(false)}
           >
-            Services
-          </NavLink>
-          <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
-          <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
-          <NavLink to="/about" onClick={() => setOpen(false)}>About</NavLink>
-          <NavLink className="nav-contact" to="/contact" onClick={() => setOpen(false)}>
-            Start a project <ArrowUpRight size={15} />
-          </NavLink>
+            Start a project
+          </ButtonRounded>
         </div>
         <button
           ref={triggerRef}
@@ -619,16 +650,18 @@ function ServiceCards() {
 
 function Home() {
   useScrollMotion()
-  return <div>
-    <Hero />
-    <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
-    <Problem />
-    <Solution servicesSlot={<ServiceCards />} />
-    <HowItWorks />
-    <Faq />
-    <FinalCta />
-    <StickyBottomCta label="Start a project" to="/contact" />
-  </div>
+  return (
+    <div className="home-page-wrap">
+      <Hero />
+      <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
+      <Problem />
+      <Solution servicesSlot={<ServiceCards />} />
+      <HowItWorks />
+      <Faq />
+      <FinalCta />
+      <StickyBottomCta label="Start a project" to="/contact" />
+    </div>
+  )
 }
 
 
@@ -2395,6 +2428,7 @@ function Contact() {
   const [formData, setFormData] = useState({
     name: '',
     business: '',
+    country: '',
     email: '',
     type: '',
     budget: '',
@@ -2439,6 +2473,10 @@ function Contact() {
     if (step === 1) {
       if (!formData.name.trim()) {
         setError('Please enter your full name to continue.')
+        return
+      }
+      if (!formData.country.trim()) {
+        setError('Please select a country.')
         return
       }
       setError('')
@@ -2497,7 +2535,7 @@ function Contact() {
 
   return (
     <PageShell eyebrow="Start a conversation" title={<>Let's build<br /><span>what's next</span></>}>
-      <div className="contact-layout">
+      <div className="contact-layout uiverse-3d-form">
         <div>
           <p className="page-intro">Tell us the shape of the idea and we’ll take it from there.</p>
           <div className="contact-detail">
@@ -2506,7 +2544,7 @@ function Contact() {
           </div>
         </div>
 
-        <div className="form-card">
+        <div className="form-card uiverse-3d-card">
           {sent ? (
             <div className="form-success-card" tabIndex="-1" ref={successRef} aria-live="polite">
               <span className="success-pill">✓ Call Request Confirmed</span>
@@ -2528,6 +2566,12 @@ function Contact() {
                   <small>TIMELINE</small>
                   <strong>{formData.timeline}</strong>
                 </div>
+                {formData.country && (
+                  <div>
+                    <small>LOCATION</small>
+                    <strong>{formData.country}</strong>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -2595,6 +2639,13 @@ function Contact() {
                         onChange={(e) => updateField('business', e.target.value)}
                       />
                     </label>
+                    <div className="full">
+                      <CountryCombobox
+                        value={formData.country}
+                        onChange={(val) => updateField('country', val)}
+                        error={error === 'Please select a country.' ? error : ''}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -2726,31 +2777,37 @@ function Contact() {
               {/* Form Actions: Back & Next / Book Call with generous spacing */}
               <div className="form-actions-row">
                 {step > 1 ? (
-                  <button
+                  <ButtonRounded
                     type="button"
-                    className="button button-outline form-back-btn"
+                    variant="secondary"
+                    arrow="none"
                     onClick={handleBack}
+                    className="form-back-btn !text-[#082D2C] !border-[rgba(8,45,44,0.35)] hover:!border-[#082D2C] hover:!bg-[rgba(8,45,44,0.06)]"
                   >
                     <ArrowLeft size={16} /> Back
-                  </button>
+                  </ButtonRounded>
                 ) : <div />}
 
                 {step < 3 ? (
-                  <button
+                  <ButtonRounded
                     type="button"
-                    className="button button-green form-next-btn"
+                    variant="accent"
+                    arrow="right"
                     onClick={handleNext}
+                    className="form-next-btn"
                   >
-                    Continue <ArrowRight size={16} />
-                  </button>
+                    Continue
+                  </ButtonRounded>
                 ) : (
-                  <button
-                    className="button button-green form-submit-btn"
+                  <ButtonRounded
                     type="submit"
+                    variant="accent"
+                    arrow="up-right"
                     disabled={sending}
+                    className="form-submit-btn"
                   >
-                    {sending ? 'Scheduling…' : 'Book a free call'} <ArrowUpRight size={17} />
-                  </button>
+                    {sending ? 'Scheduling…' : 'Book a free call'}
+                  </ButtonRounded>
                 )}
               </div>
 

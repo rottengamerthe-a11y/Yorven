@@ -246,7 +246,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const { name, business, email, type, budget, timeline, description, website } = req.body || {};
+  const { name, business, country, email, type, budget, timeline, description, website } = req.body || {};
 
   // 4. Honeypot check for automated spam bots
   if (website) {
@@ -268,6 +268,7 @@ export default async function handler(req, res) {
   const cleanEmail = email.trim();
   const cleanDesc = sanitizeForDiscord(description.trim());
   const cleanBusiness = sanitizeForDiscord((business || '').trim());
+  const cleanCountry = sanitizeForDiscord((country || 'International').trim()).slice(0, 80);
   const cleanType = (type || 'Custom Software').trim();
   const cleanBudget = (budget || 'Not specified').trim();
   const cleanTimeline = (timeline || 'Not specified').trim();
@@ -310,6 +311,7 @@ export default async function handler(req, res) {
           fields: [
             { name: '👤 Client Name', value: cleanName, inline: true },
             { name: '🏢 Venture / Business', value: cleanBusiness || 'Not specified', inline: true },
+            { name: '🌍 Country / Location', value: cleanCountry, inline: true },
             { name: '✉️ Work Email', value: `[${cleanEmail}](mailto:${cleanEmail})`, inline: true },
             { name: '🛠️ Project Focus', value: cleanType, inline: true },
             { name: '💰 Budget Bracket', value: cleanBudget, inline: true },

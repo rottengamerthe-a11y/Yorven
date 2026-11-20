@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ArrowDown,
   ArrowDownRight,
   ArrowUpRight,
   Check,
@@ -17,6 +18,8 @@ import {
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
 import { modernClasses } from '../data/site'
 import { SafeImage } from '../components/ui/SafeImage'
+import { GradientBackground } from '../components/GradientBackground'
+import { ButtonRounded } from '../components/ui/button-rounded'
 import './landing.css'
 
 /* ---------- helpers ---------- */
@@ -63,130 +66,206 @@ function Heading({ lines, className = '' }) {
 /* ---------- 1. HERO ---------- */
 
 export function Hero() {
-  const heroLines = HERO.lines
-  const perLine = Math.max(...heroLines.map((l) => l.length))
-  return <section className="lp-hero-wrap" data-theme="teal">
-    <div className="lp-sky" aria-hidden="true">
-      <div className="lp-sky-glow" />
-      <div className="lp-clouds lp-clouds-far"><div className="lp-cloud-plane"><div className="lp-cloud-tex" /></div></div>
-      <div className="lp-clouds lp-clouds-near"><div className="lp-cloud-plane"><div className="lp-cloud-tex" /></div></div>
-    </div>
-    <div className="hero lp-hero container scroll-reveal is-visible">
-      <div className="hero-copy reveal">
-        <h1 aria-label={heroLines.map((l) => l.join(' ')).join(' ')}>
-          {heroLines.map((line, lineIndex) => <span className="hero-line" key={lineIndex}>
-            {line.map((word, wordIndex) => <React.Fragment key={word}>
-              {word === HERO.highlight
-                ? <em className="hero-word word-deserves" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}<span className="headline-mark" aria-hidden="true"><svg viewBox="0 0 180 24" role="presentation"><path d="M4 17 C 42 5, 85 23, 176 7" /></svg></span></em>
-                : <span className="hero-word" style={{ '--word-index': lineIndex * perLine + wordIndex }}>{word}</span>}
-              {wordIndex < line.length - 1 ? ' ' : ''}
-            </React.Fragment>)}
-            {lineIndex === heroLines.length - 1 && <span className="lime">.</span>}
-          </span>)}
-        </h1>
-        <p className="lede">{HERO.lede}</p>
-        <div className="hero-actions">
-          <Link className="button button-lime" to={HERO.primary.to}>{HERO.primary.label} <ArrowUpRight size={17} /></Link>
-          <a className="text-link" href={HERO.secondary.href}>{HERO.secondary.label} <ArrowDownRight size={17} /></a>
-        </div>
-        <ul className="lp-trust" aria-label="What you can count on">
-          {HERO.trust.map((item) => <li key={item}><Check size={15} strokeWidth={2.5} />{item}</li>)}
-        </ul>
-      </div>
-      <div className="hero-art reveal" aria-label="Real digital products engineered by Yorven">
-        <div className="hero-canvas-grid" aria-hidden="true" />
+  const stageWrapperRef = useRef(null)
 
-        {/* 1. Desktop Dashboard: ProofPay (PayperAI) */}
-        <div className="hero-card hero-card-desktop">
-          <div className="h-card-bar">
-            <span className="dot dot-teal" />
-            <span className="dot dot-teal" />
-            <span className="dot dot-teal" />
-            <span className="h-bar-url">proofpay.ai</span>
-            <span className="h-bar-badge">Live System</span>
-          </div>
-          <div className="h-desktop-content">
-            <div className="h-desktop-kpis">
-              <div className="h-dkpi">
-                <small>OUTSTANDING</small>
-                <strong>$34,500</strong>
-              </div>
-              <div className="h-dkpi">
-                <small>AUTO-RECOVERED</small>
-                <strong className="text-green">$104,200</strong>
-              </div>
-            </div>
-            <div className="h-desktop-rows">
-              <div className="h-drow alert">
-                <div className="h-drow-meta">
-                  <b>Apex Logistics Ltd</b>
-                  <small>INV-041 · 16d overdue</small>
-                </div>
-                <span className="h-drow-amt">$8,500</span>
-              </div>
-              <div className="h-drow">
-                <div className="h-drow-meta">
-                  <b>Kinetix Cloud Corp</b>
-                  <small>INV-039 · Due in 3d</small>
-                </div>
-                <span className="h-drow-amt">$14,200</span>
-              </div>
-            </div>
-          </div>
-        </div>
+  useEffect(() => {
+    const el = stageWrapperRef.current
+    if (!el) return
 
-        {/* 2. Mobile Device: Racers Vault (Porsche 911 GT3 R Grello) */}
-        <div className="hero-card hero-card-phone">
-          <div className="h-phone-notch"><span /></div>
-          <div className="h-phone-screen">
-            <SafeImage
-              src="/projects/racers-vault/porsche-gt3r-grello.webp"
-              alt="Porsche 911 GT3 R Grello in Racers Vault"
-              className="h-phone-img"
-              width="576"
-              height="930"
-              aspectRatio="576 / 930"
-            />
-          </div>
-        </div>
+    const updateScale = () => {
+      const parent = el.closest('.hero-figma-right') || el.parentElement
+      const w = parent ? parent.getBoundingClientRect().width : el.getBoundingClientRect().width
+      if (w > 0) {
+        const scale = Math.min(1, w / 540)
+        el.style.setProperty('--stage-scale', scale.toFixed(4))
+      }
+    }
 
-        {/* 3. Bot Platform: Aurix Discord Engine (Replaces bottom-left panel) */}
-        <div className="hero-panel panel-aurix">
-          <div className="h-bot-id">
-            <div className="h-bot-avatar-wrap">
-              <SafeImage
-                src="/projects/aurix/aurix-flame-avatar.webp"
-                alt="Aurix"
-                className="h-bot-avatar-img"
-                width="460"
-                height="460"
-                aspectRatio="1 / 1"
-              />
-            </div>
-            <div className="h-bot-title-row">
-              <strong>Aurix</strong>
-              <span className="h-bot-app">APP</span>
-            </div>
-            <span className="h-bot-shards">● 16 Shards</span>
-          </div>
-          <div className="h-bot-embed">
-            <div className="h-embed-title">
-              <span className="h-spin-icon">✨</span>
-              <b>Spin Complete • SUCCESS</b>
-            </div>
-            <p className="h-embed-payout">
-              Gained <b>154 aura</b> & <b>103 XP</b>
+    updateScale()
+    const ro = new ResizeObserver(updateScale)
+    ro.observe(el)
+    if (el.parentElement) ro.observe(el.parentElement)
+    window.addEventListener('resize', updateScale)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', updateScale)
+    }
+  }, [])
+
+  return (
+    <section className="hero-figma-section" data-theme="teal">
+      {/* 1) shadcn.io Gradient WebGL2 Animated Shader Background */}
+      <GradientBackground
+        type="linear"
+        angle={118}
+        colors={["#0a1210", "#0f3b33", "#16b5a3", "#12372f", "#3fbf4a", "#0f2a25", "#7f93d6", "#0a1210"]}
+        scale={1.3}
+        warp={1.4}
+        detail={0.55}
+        softness={0.85}
+        contrast={1.25}
+        intensity={1.25}
+        flow={1.2}
+        speed={1.2}
+        grain={0.4}
+        interactive={true}
+        quality={0.75}
+        backgroundColor="#0a1210"
+        fallback="radial-gradient(circle at 15% 10%, rgba(185,196,191,0.13), transparent 50%), #0a1210"
+      />
+
+      <div className="hero-figma-container">
+        {/* Left Column (about 55% width, vertically distributed) */}
+        <div className="hero-figma-left">
+          <p className="hero-figma-top-label">
+            IDEAS INTO INTERFACES, INTERFACES INTO IMPACT.
+          </p>
+
+          <div className="hero-figma-main-content">
+            <h1 className="hero-figma-heading">
+              <span className="hero-heading-line">Launch Your</span>
+              <br />
+              <span className="hero-heading-line">Products</span>
+            </h1>
+
+            <p className="hero-figma-subtext">
+              We're Yorven. An independent studio<br className="hero-wrap-break" />
+              turning ambitious ideas into websites,<br className="hero-wrap-break" />
+              apps and systems that hold up.
             </p>
-            <div className="h-embed-row">
-              <span className="h-cmd-pill">/spin</span>
-              <span className="h-wallet-note">174,381 aura</span>
+
+            <div className="hero-figma-buttons">
+              <a href="/contact" className="hero-btn-pill-primary">
+                <span>Bring us your idea</span>
+                <ArrowUpRight size={20} strokeWidth={2} className="hero-pill-arrow-svg" aria-hidden="true" />
+              </a>
+
+              <a href="#proof" className="hero-btn-text-secondary">
+                <span>Explore our work</span>
+                <ArrowDown size={14} strokeWidth={2.5} className="hero-text-arrow-svg" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+
+          <div className="hero-figma-scroll-hint">
+            <span>SCROLL TO SEE THE WORK</span>
+            <ArrowDown size={11} strokeWidth={2} className="hero-scroll-arrow-svg" aria-hidden="true" />
+          </div>
+        </div>
+
+        {/* Right Column (about 40% width, vertically centered, real live components) */}
+        <div className="hero-figma-right" aria-label="Selected product works by Yorven">
+          <div className="hero-stage-float-wrapper">
+            <div className="hero-stage-scale-wrapper" ref={stageWrapperRef}>
+              <div className="hero-art-stage">
+                {/* Concentric circles contour */}
+                <svg className="hero-stage-circles" viewBox="0 0 540 520" fill="none" aria-hidden="true">
+                  <circle cx="270" cy="260" r="140" stroke="rgba(45, 212, 191, 0.12)" strokeWidth="1" />
+                  <circle cx="270" cy="260" r="210" stroke="rgba(45, 212, 191, 0.08)" strokeWidth="1" />
+                  <circle cx="270" cy="260" r="280" stroke="rgba(45, 212, 191, 0.05)" strokeWidth="1" />
+                </svg>
+
+                {/* 1. Desktop Dashboard: ProofPay (PayperAI) */}
+                <div className="hero-card hero-card-desktop">
+                  <div className="h-card-bar">
+                    <span className="dot dot-teal" />
+                    <span className="dot dot-teal" />
+                    <span className="dot dot-teal" />
+                    <span className="h-bar-url">proofpay.ai</span>
+                    <span className="h-bar-badge">Live System</span>
+                  </div>
+                  <div className="h-desktop-content">
+                    <div className="h-desktop-kpis">
+                      <div className="h-dkpi">
+                        <small>OUTSTANDING</small>
+                        <strong>$34,500</strong>
+                      </div>
+                      <div className="h-dkpi">
+                        <small>AUTO-RECOVERED</small>
+                        <strong className="text-green">$104,200</strong>
+                      </div>
+                    </div>
+                    <div className="h-desktop-rows">
+                      <div className="h-drow alert">
+                        <div className="h-drow-meta">
+                          <b>Apex Logistics Ltd</b>
+                          <small>INV-041 · 16d overdue</small>
+                        </div>
+                        <span className="h-drow-amt">$8,500</span>
+                      </div>
+                      <div className="h-drow">
+                        <div className="h-drow-meta">
+                          <b>Kinetix Cloud Corp</b>
+                          <small>INV-039 · Due in 3d</small>
+                        </div>
+                        <span className="h-drow-amt">$14,200</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Mobile Device: Racers Vault (Porsche 911 GT3 R Grello) */}
+                <div className="hero-card hero-card-phone">
+                  <div className="h-phone-notch"><span /></div>
+                  <div className="h-phone-screen">
+                    <img
+                      src="/projects/racers-vault/porsche-gt3r-grello.webp"
+                      alt="Porsche 911 GT3 R Grello in Racers Vault"
+                      className="h-phone-img"
+                      width="576"
+                      height="930"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Bot Platform: Aurix Discord Engine */}
+                <div className="hero-card panel-aurix">
+                  <div className="h-bot-id">
+                    <div className="h-bot-avatar-wrap">
+                      <img
+                        src="/projects/aurix/aurix-flame-avatar.webp"
+                        alt="Aurix"
+                        className="h-bot-avatar-img"
+                        width="460"
+                        height="460"
+                      />
+                    </div>
+                    <div className="h-bot-title-row">
+                      <strong>Aurix</strong>
+                      <span className="h-bot-app">APP</span>
+                    </div>
+                    <span className="h-bot-shards">● 16 Shards</span>
+                  </div>
+                  <div className="h-bot-embed">
+                    <div className="h-embed-title">
+                      <svg
+                        className="h-spin-sparkle-svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4L12 0Z" />
+                      </svg>
+                      <b>Spin Complete • SUCCESS</b>
+                    </div>
+                    <p className="h-embed-payout">
+                      Gained <b>154 aura</b> &amp; <b>103 XP</b>
+                    </p>
+                    <div className="h-embed-row">
+                      <span className="h-cmd-pill">/spin</span>
+                      <span className="h-wallet-note">174,381 aura</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div className="hero-scroll"><span>Scroll to explore</span><div className="scroll-line" /></div>
-    </div>
-  </section>
+    </section>
+  )
 }
 
 export function MobileScreenshotCarousel({ screens = [] }) {
@@ -302,138 +381,147 @@ export function ModernClassesProofCard() {
   const screens = modernClasses.carouselScreens || []
   const current = screens[activeScreen] || screens[0]
 
-  const nextScreen = () => setActiveScreen((prev) => (prev + 1) % screens.length)
-  const prevScreen = () => setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
+  const nextScreen = (e) => {
+    e?.preventDefault?.()
+    e?.stopPropagation?.()
+    setActiveScreen((prev) => (prev + 1) % screens.length)
+  }
+  const prevScreen = (e) => {
+    e?.preventDefault?.()
+    e?.stopPropagation?.()
+    setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
+  }
 
   return (
     <div className="mc-proof-card">
       <div className="mc-hero-grid">
-        {/* Left Column: Editorial Info & Action Controls */}
-        <div className="mc-hero-editorial">
-          <div className="mc-badge-row">
-            <span className="mc-badge-neutral">
-              <span className="mc-dot" /> Live on Google Play
-            </span>
-            <span className="mc-badge-neutral">
-              Android Application · 2025–2026
-            </span>
-          </div>
-
-          <h3 className="mc-hero-h1 mc-proof-h1">
-            Modern Classes — <span className="mc-lime-accent">a learning app for board &amp; competitive exams</span>
-          </h3>
-
-          <p className="mc-hero-intro">
-            {modernClasses.subtitle}
-          </p>
-
-          <div className="mc-action-row">
-            <div className="mc-action-buttons">
-              <a
-                href={modernClasses.liveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="button button-lime mc-play-btn"
-              >
-                View on Google Play <ArrowUpRight size={16} />
-              </a>
-              <Link to="/work/modern-classes" className="mc-secondary-link">
-                See how we built it <ArrowUpRight size={14} />
-              </Link>
+          {/* Left Column: Editorial Info & Action Controls */}
+          <div className="mc-hero-editorial">
+            <div className="mc-badge-row">
+              <span className="mc-badge-neutral">
+                <span className="mc-dot" /> Live on Google Play
+              </span>
+              <span className="mc-badge-neutral">
+                Android Application · 2025–2026
+              </span>
             </div>
 
-            <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
-              <SafeImage
-                src={modernClasses.qrCode || '/projects/modern-classes-qr.svg'}
-                alt="Scan QR code to open Modern Classes on Google Play"
-                className="mc-qr-img"
-                width="52"
-                height="52"
-                loading="lazy"
-                aspectRatio="1 / 1"
-              />
-              <div className="mc-qr-info">
-                <strong>Scan on Android</strong>
-                <small>Instant Google Play link</small>
+            <h3 className="mc-hero-h1 mc-proof-h1">
+              Modern Classes — <span className="mc-lime-accent">a learning app for board &amp; competitive exams</span>
+            </h3>
+
+            <p className="mc-hero-intro">
+              {modernClasses.subtitle}
+            </p>
+
+            <div className="mc-action-row" onClick={(e) => e.stopPropagation()}>
+              <div className="mc-action-buttons">
+                <a
+                  href={modernClasses.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="button button-lime mc-play-btn"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View on Google Play <ArrowUpRight size={16} />
+                </a>
+                <span className="mc-secondary-link">
+                  See how we built it <ArrowUpRight size={14} />
+                </span>
+              </div>
+
+              <div className="mc-desktop-qr-card" title="Scan with Android camera to open on Google Play">
+                <SafeImage
+                  src={modernClasses.qrCode || '/projects/modern-classes-qr.svg'}
+                  alt="Scan QR code to open Modern Classes on Google Play"
+                  className="mc-qr-img"
+                  width="52"
+                  height="52"
+                  loading="lazy"
+                  aspectRatio="1 / 1"
+                />
+                <div className="mc-qr-info">
+                  <strong>Scan on Android</strong>
+                  <small>Instant Google Play link</small>
+                </div>
+              </div>
+            </div>
+
+            {/* 2x2 Feature Chips with Icons */}
+            <div className="mc-feature-grid" aria-label="Key app features">
+              <div className="mc-feature-chip">
+                <div className="mc-feature-chip-icon"><Tv size={16} /> <span>Live Classes</span></div>
+                <p>Streaming &amp; recorded video lectures</p>
+              </div>
+              <div className="mc-feature-chip">
+                <div className="mc-feature-chip-icon"><FileCheck size={16} /> <span>Mock Tests</span></div>
+                <p>Timed single-choice testing engine</p>
+              </div>
+              <div className="mc-feature-chip">
+                <div className="mc-feature-chip-icon"><BookOpen size={16} /> <span>Study Vault</span></div>
+                <p>Bilingual notes &amp; batch schedules</p>
+              </div>
+              <div className="mc-feature-chip">
+                <div className="mc-feature-chip-icon"><HelpCircle size={16} /> <span>Doubts Desk</span></div>
+                <p>Direct faculty resolution &amp; review</p>
               </div>
             </div>
           </div>
 
-          {/* 2x2 Feature Chips with Icons */}
-          <div className="mc-feature-grid" aria-label="Key app features">
-            <div className="mc-feature-chip">
-              <div className="mc-feature-chip-icon"><Tv size={16} /> <span>Live Classes</span></div>
-              <p>Streaming &amp; recorded video lectures</p>
-            </div>
-            <div className="mc-feature-chip">
-              <div className="mc-feature-chip-icon"><FileCheck size={16} /> <span>Mock Tests</span></div>
-              <p>Timed single-choice testing engine</p>
-            </div>
-            <div className="mc-feature-chip">
-              <div className="mc-feature-chip-icon"><BookOpen size={16} /> <span>Study Vault</span></div>
-              <p>Bilingual notes &amp; batch schedules</p>
-            </div>
-            <div className="mc-feature-chip">
-              <div className="mc-feature-chip-icon"><HelpCircle size={16} /> <span>Doubts Desk</span></div>
-              <p>Direct faculty resolution &amp; review</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Desktop Interactive Showcase & Mobile Scroll-Snap Carousel */}
-        <div className="mc-phone-showcase">
-          {/* Desktop Single-Device View (hidden on mobile via CSS) */}
-          <div className="mc-desktop-phone-view">
-            <div
-              className="mc-phone-device"
-              onClick={nextScreen}
-              style={{ cursor: 'pointer' }}
-              title="Click to view next screen"
-            >
-              <div className="mc-phone-viewport">
-                {current && (
-                  <SafeImage
-                    src={current.src}
-                    alt={current.alt}
-                    className="mc-phone-screen"
-                    width="576"
-                    height="1024"
-                    loading="lazy"
-                    aspectRatio="576 / 1024"
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="mc-phone-controls">
-              <button
-                type="button"
-                className="mc-nav-arrow"
-                onClick={prevScreen}
-                aria-label="Previous screen"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="mc-phone-caption">
-                <strong>{current ? current.title : ''}</strong>
-                <span>{current ? current.subtitle : ''}</span>
-              </div>
-              <button
-                type="button"
-                className="mc-nav-arrow"
+          {/* Right Column: Desktop Interactive Showcase & Mobile Scroll-Snap Carousel */}
+          <div className="mc-phone-showcase" onClick={(e) => e.stopPropagation()}>
+            {/* Desktop Single-Device View (hidden on mobile via CSS) */}
+            <div className="mc-desktop-phone-view">
+              <div
+                className="mc-phone-device"
                 onClick={nextScreen}
-                aria-label="Next screen"
+                style={{ cursor: 'pointer' }}
+                title="Click to view next screen"
               >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+                <div className="mc-phone-viewport">
+                  {current && (
+                    <SafeImage
+                      src={current.src}
+                      alt={current.alt}
+                      className="mc-phone-screen"
+                      width="576"
+                      height="1024"
+                      loading="lazy"
+                      aspectRatio="576 / 1024"
+                    />
+                  )}
+                </div>
+              </div>
 
-          {/* Mobile Native Scroll-Snap Carousel (visible only on mobile) */}
-          <MobileScreenshotCarousel screens={screens} />
+              <div className="mc-phone-controls">
+                <button
+                  type="button"
+                  className="mc-nav-arrow"
+                  onClick={prevScreen}
+                  aria-label="Previous screen"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="mc-phone-caption">
+                  <strong>{current ? current.title : ''}</strong>
+                  <span>{current ? current.subtitle : ''}</span>
+                </div>
+                <button
+                  type="button"
+                  className="mc-nav-arrow"
+                  onClick={nextScreen}
+                  aria-label="Next screen"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Native Scroll-Snap Carousel (visible only on mobile) */}
+            <MobileScreenshotCarousel screens={screens} />
+          </div>
         </div>
       </div>
-    </div>
   )
 }
 
@@ -462,37 +550,384 @@ export function Proof({ concepts }) {
         {hasResults && <p className="eyebrow">Featured Products &amp; Platforms</p>}
         <div className="work-grid">{concepts}</div>
         <div className="lp-section-cta" style={{ marginTop: '32px', textAlign: 'center' }}>
-          <Link to="/work" className="button button-lime" style={{ display: 'inline-flex' }}>
-            <span>Explore all selected work</span>
-            <ArrowUpRight size={16} />
-          </Link>
+          <ButtonRounded variant="accent" size="md" to="/work" arrow="up-right">
+            Explore all selected work
+          </ButtonRounded>
+          <Link to="/work" className="sr-only" tabIndex="-1" aria-hidden="true">Explore all selected work</Link>
         </div>
       </div>}
     </div>
   </section>
 }
 
-/* ---------- 3. PROBLEM ---------- */
+/* ---------- 3. PROBLEM & CALCULATOR ---------- */
+
+/* Calculator Tunables */
+const SMOOTHING = 0.14
+const NUMBER_SMOOTHING = 0.15
+const CURVE = 1.8
+const USE_SLOWING_SCALE = true
+
+function valueToT(val, min, max) {
+  const p = Math.max(0, Math.min(1, (val - min) / (max - min)))
+  if (!USE_SLOWING_SCALE) return p
+  return 1 - Math.pow(Math.max(0, 1 - p), 1 / CURVE)
+}
+
+function tToValue(t, min, max, step) {
+  const clampedT = Math.max(0, Math.min(1, t))
+  const progress = USE_SLOWING_SCALE ? 1 - Math.pow(1 - clampedT, CURVE) : clampedT
+  const raw = min + (max - min) * progress
+  const stepped = Math.round((raw - min) / step) * step + min
+  return Math.max(min, Math.min(max, stepped))
+}
+
+function SmoothSlider({
+  id,
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  onFinalChange,
+  ariaLabel,
+  ariaValueText,
+  isSectionVisible = true
+}) {
+  const trackRef = useRef(null)
+  const thumbRef = useRef(null)
+  const fillRef = useRef(null)
+  const inputRef = useRef(null)
+
+  const initialT = valueToT(value, min, max)
+  const currentPosRef = useRef(initialT)
+  const targetPosRef = useRef(initialT)
+  const isAnimatingRef = useRef(false)
+  const isInteractingRef = useRef(false)
+  const isTouchingRef = useRef(false)
+  const rafIdRef = useRef(null)
+  const [isPressed, setIsPressed] = useState(false)
+
+  const updateVisuals = (t) => {
+    if (!trackRef.current || !thumbRef.current || !fillRef.current) return
+    const trackWidth = trackRef.current.clientWidth
+    const thumbWidth = 22
+    const availableWidth = Math.max(0, trackWidth - thumbWidth)
+    const clampedT = Math.max(0, Math.min(1, t))
+    const x = Math.round(clampedT * availableWidth)
+
+    thumbRef.current.style.transform = `translate3d(${x}px, -50%, 0) scale(${isPressed ? 1.08 : 1})`
+    const fillScale = trackWidth > 0 ? (x + thumbWidth / 2) / trackWidth : clampedT
+    fillRef.current.style.transform = `scaleX(${Math.max(0, Math.min(1, fillScale))})`
+  }
+
+  const animate = () => {
+    // Keep animating if user is interacting, even if isSectionVisible is false
+    if (!isSectionVisible && !isInteractingRef.current) {
+      isAnimatingRef.current = false
+      return
+    }
+
+    if (motionReduced()) {
+      currentPosRef.current = targetPosRef.current
+      updateVisuals(currentPosRef.current)
+      isAnimatingRef.current = false
+      return
+    }
+
+    const diff = targetPosRef.current - currentPosRef.current
+    if (Math.abs(diff) < 0.0005) {
+      currentPosRef.current = targetPosRef.current
+      updateVisuals(currentPosRef.current)
+      isAnimatingRef.current = false
+      return
+    }
+
+    currentPosRef.current += diff * SMOOTHING
+    updateVisuals(currentPosRef.current)
+    rafIdRef.current = requestAnimationFrame(animate)
+  }
+
+  const startAnimation = () => {
+    if (!isAnimatingRef.current) {
+      isAnimatingRef.current = true
+      rafIdRef.current = requestAnimationFrame(animate)
+    }
+  }
+
+  useEffect(() => {
+    const newT = valueToT(value, min, max)
+    targetPosRef.current = newT
+    if (inputRef.current && parseFloat(inputRef.current.value) !== newT) {
+      inputRef.current.value = newT
+    }
+    if (motionReduced()) {
+      currentPosRef.current = newT
+      updateVisuals(newT)
+    } else if (isTouchingRef.current) {
+      currentPosRef.current = newT
+      updateVisuals(newT)
+    } else {
+      startAnimation()
+    }
+  }, [value, min, max])
+
+  useLayoutEffect(() => {
+    updateVisuals(currentPosRef.current)
+  }, [isPressed])
+
+  // Apply visual transform before first paint on initial mount
+  useLayoutEffect(() => {
+    updateVisuals(currentPosRef.current)
+  }, [])
+
+  // Restart loop when slider becomes visible if current hasn't reached target
+  useEffect(() => {
+    if (isSectionVisible && Math.abs(targetPosRef.current - currentPosRef.current) >= 0.0005) {
+      startAnimation()
+    }
+  }, [isSectionVisible])
+
+  useEffect(() => {
+    updateVisuals(currentPosRef.current)
+    const handleResize = () => updateVisuals(currentPosRef.current)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+    }
+  }, [])
+
+  const handleInput = (e) => {
+    const t = parseFloat(e.target.value)
+    targetPosRef.current = t
+    isInteractingRef.current = true
+
+    // Direct immediate visual update for zero-latency touch and drag response
+    currentPosRef.current = t
+    updateVisuals(t)
+
+    const nextVal = tToValue(t, min, max, step)
+    onChange(nextVal)
+    startAnimation()
+  }
+
+  return (
+    <div className="smooth-slider-wrap">
+      <input
+        ref={inputRef}
+        id={id}
+        type="range"
+        min="0"
+        max="1"
+        step="0.001"
+        defaultValue={initialT}
+        onInput={handleInput}
+        onChange={handleInput}
+        onPointerDown={(e) => {
+          isInteractingRef.current = true
+          setIsPressed(true)
+          if (e.pointerType === 'touch') {
+            isTouchingRef.current = true
+          }
+        }}
+        onPointerUp={(e) => {
+          if (e.pointerType === 'touch') {
+            isTouchingRef.current = false
+          }
+          isInteractingRef.current = false
+          setIsPressed(false)
+          onFinalChange?.()
+        }}
+        onPointerCancel={() => {
+          isTouchingRef.current = false
+          isInteractingRef.current = false
+          setIsPressed(false)
+        }}
+        onTouchStart={() => {
+          isTouchingRef.current = true
+          isInteractingRef.current = true
+          setIsPressed(true)
+        }}
+        onTouchEnd={() => {
+          isTouchingRef.current = false
+          isInteractingRef.current = false
+          setIsPressed(false)
+          onFinalChange?.()
+        }}
+        onTouchCancel={() => {
+          isTouchingRef.current = false
+          isInteractingRef.current = false
+          setIsPressed(false)
+        }}
+        onKeyDown={(e) => {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+            isInteractingRef.current = true
+            setIsPressed(true)
+          }
+        }}
+        onKeyUp={() => {
+          isInteractingRef.current = false
+          setIsPressed(false)
+          onFinalChange?.()
+        }}
+        className="smooth-slider-native"
+        aria-label={ariaLabel}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-valuetext={ariaValueText}
+      />
+      <div className="smooth-slider-track" ref={trackRef}>
+        <div className="smooth-slider-fill" ref={fillRef} />
+      </div>
+      <div
+        className={`smooth-slider-thumb ${isPressed ? 'is-pressed' : ''}`}
+        ref={thumbRef}
+        aria-hidden="true"
+      />
+    </div>
+  )
+}
 
 function CostOfDelay() {
   const c = PROBLEM.calc
   const [value, setValue] = useState(10000)
   const [months, setMonths] = useState(3)
-  const shown = useCountUp(value * months)
-  return <div className="lp-calc stagger-reveal">
-    <div className="lp-calc-inputs">
-      <p className="eyebrow">{c.title}</p>
-      <label htmlFor="lp-value">{c.valueLabel}<output>{usd.format(value)} / month</output></label>
-      <input id="lp-value" className="lp-range" type="range" min="1000" max="50000" step="1000" value={value} onChange={(e) => setValue(Number(e.target.value))} />
-      <label htmlFor="lp-months">{c.monthsLabel}<output>{months} {months === 1 ? 'month' : 'months'}</output></label>
-      <input id="lp-months" className="lp-range" type="range" min="1" max="12" step="1" value={months} onChange={(e) => setMonths(Number(e.target.value))} />
+
+  const [displayValue, setDisplayValue] = useState(10000)
+  const [displayMonths, setDisplayMonths] = useState(3)
+  const [displayResult, setDisplayResult] = useState(30000)
+  const [liveAnnouncement, setLiveAnnouncement] = useState('')
+
+  const calcRef = useRef(null)
+  const [isSectionVisible, setIsSectionVisible] = useState(true)
+
+  useEffect(() => {
+    const el = calcRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSectionVisible(entry.isIntersecting)
+      },
+      { threshold: 0.05 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (motionReduced()) {
+      setDisplayValue(value)
+      setDisplayMonths(months)
+      setDisplayResult(value * months)
+      return
+    }
+
+    if (!isSectionVisible) {
+      setDisplayValue(value)
+      setDisplayMonths(months)
+      setDisplayResult(value * months)
+      return
+    }
+
+    let rafId = null
+    const targetResult = value * months
+
+    const tick = () => {
+      let active = false
+
+      setDisplayValue((prev) => {
+        const diff = value - prev
+        if (Math.abs(diff) < 1) return value
+        active = true
+        return prev + diff * NUMBER_SMOOTHING
+      })
+
+      setDisplayMonths((prev) => {
+        const diff = months - prev
+        if (Math.abs(diff) < 0.02) return months
+        active = true
+        return prev + diff * NUMBER_SMOOTHING
+      })
+
+      setDisplayResult((prev) => {
+        const diff = targetResult - prev
+        if (Math.abs(diff) < 1) return targetResult
+        active = true
+        return prev + diff * NUMBER_SMOOTHING
+      })
+
+      if (active) {
+        rafId = requestAnimationFrame(tick)
+      }
+    }
+
+    rafId = requestAnimationFrame(tick)
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [value, months, isSectionVisible])
+
+  const handleFinalChange = () => {
+    setLiveAnnouncement(
+      `${usd.format(value)} per month, delayed by ${months} ${months === 1 ? 'month' : 'months'}. Total estimated delay cost: ${usd.format(value * months)} ${c.resultLabel}.`
+    )
+  }
+
+  return (
+    <div className="lp-calc stagger-reveal" ref={calcRef}>
+      <div className="lp-calc-inputs">
+        <p className="eyebrow">{c.title}</p>
+
+        <label htmlFor="lp-value">
+          {c.valueLabel}
+          <output>{usd.format(Math.round(displayValue))} / month</output>
+        </label>
+        <SmoothSlider
+          id="lp-value"
+          min={1000}
+          max={50000}
+          step={1000}
+          value={value}
+          onChange={setValue}
+          onFinalChange={handleFinalChange}
+          ariaLabel={c.valueLabel}
+          ariaValueText={`${usd.format(value)} per month`}
+          isSectionVisible={isSectionVisible}
+        />
+
+        <label htmlFor="lp-months">
+          {c.monthsLabel}
+          <output>{Math.round(displayMonths)} {Math.round(displayMonths) === 1 ? 'month' : 'months'}</output>
+        </label>
+        <SmoothSlider
+          id="lp-months"
+          min={1}
+          max={12}
+          step={1}
+          value={months}
+          onChange={setMonths}
+          onFinalChange={handleFinalChange}
+          ariaLabel={c.monthsLabel}
+          ariaValueText={`${months} ${months === 1 ? 'month' : 'months'}`}
+          isSectionVisible={isSectionVisible}
+        />
+      </div>
+
+      <div className="lp-calc-result" aria-live="polite">
+        <span className="lp-calc-number">{usd.format(Math.round(displayResult))}</span>
+        <span className="lp-calc-label">{c.resultLabel}</span>
+        <p>{c.footnote}</p>
+        <span className="sr-only" aria-atomic="true">
+          {liveAnnouncement}
+        </span>
+      </div>
     </div>
-    <div className="lp-calc-result" aria-live="polite">
-      <span className="lp-calc-number">{usd.format(Math.round(shown))}</span>
-      <span className="lp-calc-label">{c.resultLabel}</span>
-      <p>{c.footnote}</p>
-    </div>
-  </div>
+  )
 }
 
 export function Problem() {
@@ -596,9 +1031,11 @@ export function Solution({ servicesSlot }) {
         <p className="eyebrow">{SOLUTION.servicesEyebrow}</p>
         {servicesSlot}
         <div className="lp-section-cta" style={{ marginTop: '32px', textAlign: 'center' }}>
-          <Link to="/services" className="button button-lime" style={{ display: 'inline-flex' }}>
-            <span>Explore all services &amp; capabilities</span>
-            <ArrowUpRight size={16} />
+          <ButtonRounded variant="accent" size="md" to="/services" arrow="up-right">
+            Explore all services &amp; capabilities
+          </ButtonRounded>
+          <Link to="/services" className="sr-only" tabIndex="-1" aria-hidden="true">
+            Explore all services &amp; capabilities
           </Link>
         </div>
       </div>}
@@ -651,17 +1088,21 @@ export function Faq() {
 
 export function FinalCta() {
   const whatsapp = import.meta.env.VITE_WHATSAPP_URL
-  return <section className="final-cta lp-cta container scroll-reveal" data-theme="cream">
-    <div className="cta-grid">
-      <p className="eyebrow">Ready when you are</p>
-      <div>
-        <h2 className="masked-heading cta-heading"><span>{CTA.title[0]}</span><span className="serif-line">{CTA.title[1]}<ArrowUpRight className="cta-heading-arrow" aria-hidden="true" /></span></h2>
-        <p className="body-copy">{CTA.text}</p>
-        <div className="lp-cta-actions">
-          <Link className="button button-green" to={CTA.button.to}>{CTA.button.label} <ArrowUpRight size={17} /></Link>
-          {whatsapp && <a className="text-link" href={whatsapp}>Or message us on WhatsApp <ArrowUpRight size={16} /></a>}
+  return <section className="final-cta-wrap lp-light" data-theme="cream">
+    <div className="final-cta lp-cta container scroll-reveal">
+      <div className="cta-grid">
+        <p className="eyebrow">Ready when you are</p>
+        <div>
+          <h2 className="masked-heading cta-heading"><span>{CTA.title[0]}</span><span className="serif-line">{CTA.title[1]}<ArrowUpRight className="cta-heading-arrow" aria-hidden="true" /></span></h2>
+          <p className="body-copy">{CTA.text}</p>
+          <div className="lp-cta-actions">
+            <ButtonRounded variant="accent" size="lg" to={CTA.button.to} arrow="up-right">
+              {CTA.button.label}
+            </ButtonRounded>
+            {whatsapp && <a className="text-link" href={whatsapp}>Or message us on WhatsApp <ArrowUpRight size={16} /></a>}
+          </div>
+          <p className="lp-cta-note">{CTA.note}</p>
         </div>
-        <p className="lp-cta-note">{CTA.note}</p>
       </div>
     </div>
   </section>
