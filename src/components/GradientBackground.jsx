@@ -347,20 +347,32 @@ export function GradientBackground({
     const canvas = canvasRef.current
     if (!root || !canvas || typeof window === 'undefined') return
 
-    const gl = canvas.getContext('webgl2', {
-      alpha: true,
-      antialias: false,
-      depth: false,
-      powerPreference: 'low-power',
-      premultipliedAlpha: true,
-      stencil: false,
+    let isDisposed = false
+    let cleanupFn = null
+
+    // Defer WebGL compilation by one animation frame to prevent main-thread freeze during initial paint
+    const frameId = requestAnimationFrame(() => {
+      if (isDisposed) return
+      cleanupFn = initWebGL()
     })
 
-    if (!gl) {
-      console.warn('[GradientBackground] WebGL2 not supported, falling back to CSS background.')
-      setWebglState('unsupported')
-      return
-    }
+    function initWebGL() {
+      if (isDisposed) return null
+
+      const gl = canvas.getContext('webgl2', {
+        alpha: false,
+        antialias: false,
+        depth: false,
+        powerPreference: 'high-performance',
+        premultipliedAlpha: true,
+        stencil: false,
+      })
+
+      if (!gl) {
+        console.warn('[GradientBackground] WebGL2 not supported, falling back to CSS background.')
+        setWebglState('unsupported')
+        return null
+      }
 
     // Compile shader pass
     function compileProgram(vertSrc, fragSrc) {
@@ -420,7 +432,6 @@ export function GradientBackground({
       return uniformLocs.get(name)
     }
 
-    let isDisposed = false
     let inView = true
     let isTabVisible = !document.hidden
     let rafId = 0
@@ -430,6 +441,22 @@ export function GradientBackground({
     let boxH = root.clientHeight || 150
     let ratio = 1
     let shownAt = 0
+
+    // Pre-allocated palette uniforms (zero-allocation render loop)
+    const paletteArray = new Float32Array(24)
+    let paletteCount = 0
+
+    function syncPalette(colorList) {
+      const list = colorList || []
+      paletteCount = Math.min(list.length, 8)
+      for (let i = 0; i < paletteCount; i++) {
+        const rgb = hexToRgb01(list[i])
+        paletteArray[i * 3 + 0] = rgb[0]
+        paletteArray[i * 3 + 1] = rgb[1]
+        paletteArray[i * 3 + 2] = rgb[2]
+      }
+    }
+    syncPalette(optionsRef.current.colors)
 
     // Pointer smoothing
     const pointer = { on: 0, tx: -1, ty: -1, vx: 0, vy: 0, x: -1, y: -1 }
@@ -514,9 +541,9 @@ export function GradientBackground({
       const opts = optionsRef.current
       const reduced = isReducedMotion()
 
-      // Canvas sizing with quality cap
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const q = Math.min(Math.max(opts.quality || 0.75, 0.25), 1.0)
+      // Canvas sizing with optimal resolution cap for diffuse aurora gradients
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.0)
+      const q = Math.min(Math.max(opts.quality || 0.45, 0.25), 0.55)
       ratio = dpr * q
 
       const w = Math.max(1, Math.round(boxW * ratio))
@@ -570,20 +597,11 @@ export function GradientBackground({
       const surfaceRgb = hexToRgb01(opts.backgroundColor || '#0a1210')
       gl.uniform3f(getLoc('uSurface'), surfaceRgb[0], surfaceRgb[1], surfaceRgb[2])
       gl.uniform1f(getLoc('uDark'), 1.0) // dark mode surface
-      gl.uniform1f(getLoc('uGrain'), opts.grain ?? 0.45)
+      gl.uniform1f(getLoc('uGrain'), opts.grain ?? 0)
 
-      // Palette array uniforms (max 8 colors)
-      const paletteArray = new Float32Array(24)
-      const colorList = opts.colors || []
-      const count = Math.min(colorList.length, 8)
-      for (let i = 0; i < count; i++) {
-        const rgb = hexToRgb01(colorList[i])
-        paletteArray[i * 3 + 0] = rgb[0]
-        paletteArray[i * 3 + 1] = rgb[1]
-        paletteArray[i * 3 + 2] = rgb[2]
-      }
+      // Palette array uniforms (using pre-allocated buffer)
       gl.uniform3fv(getLoc('uColors'), paletteArray)
-      gl.uniform1i(getLoc('uColorsCount'), count)
+      gl.uniform1i(getLoc('uColorsCount'), paletteCount)
 
       // Gradient specific uniforms
       const angleRad = ((opts.angle ?? 135) * Math.PI) / 180
@@ -631,7 +649,6 @@ export function GradientBackground({
     }
 
     return () => {
-      isDisposed = true
       if (rafId) cancelAnimationFrame(rafId)
       window.removeEventListener('pointermove', onPointerMove)
       document.documentElement.removeEventListener('pointerleave', onPointerLeave)
@@ -645,7 +662,14 @@ export function GradientBackground({
         gl.deleteBuffer(quadBuffer)
       }
     }
-  }, [])
+  }
+
+  return () => {
+    isDisposed = true
+    cancelAnimationFrame(frameId)
+    if (cleanupFn) cleanupFn()
+  }
+}, [])
 
   const fadeClass = fade && fade !== 'none' ? `gb-fade-${fade}` : ''
 

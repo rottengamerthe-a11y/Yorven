@@ -198,8 +198,8 @@ export const seoRoutes = {
     ]
   },
   '/work/racers-vault': {
-    title: 'Racers Vault — AI Supercar Radar & Digital Garage | Yorven',
-    description: 'How Yorven engineered a camera-first mobile experience with multimodal computer vision and GPS-locked supercar spotting telemetry.',
+    title: "Racer's Vault — AI Supercar Radar & Digital Garage | Yorven",
+    description: "How Yorven engineered a camera-first mobile experience with multimodal computer vision and GPS-locked supercar spotting telemetry.",
     canonical: `${SITE_URL}/work/racers-vault`,
     ogType: 'article',
     ogImage: `${SITE_URL}/projects/racers-vault/porsche-gt3r-grello.jpg`,
@@ -208,8 +208,8 @@ export const seoRoutes = {
       {
         '@context': 'https://schema.org',
         '@type': 'CreativeWork',
-        name: 'Racers Vault Mobile Experience',
-        headline: 'Racers Vault — Supercar Spotting Platform & Collectible Garage',
+        name: "Racer's Vault Mobile Experience",
+        headline: "Racer's Vault — Supercar Spotting Platform & Collectible Garage",
         description: 'A camera-first mobile app that identifies exotic supercars on the street in real time using multimodal AI, giving automotive enthusiasts a collectible digital garage.',
         url: `${SITE_URL}/work/racers-vault`,
         image: `${SITE_URL}/projects/racers-vault/porsche-gt3r-grello.jpg`,
