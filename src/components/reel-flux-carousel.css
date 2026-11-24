@@ -1,0 +1,418 @@
+/* ==========================================================================
+   REEL FLUX WEBGL CAROUSEL STYLES
+   - Seamless #0a1210 background matching hero dissolve
+   - Full-bleed 3D curved cylinder canvas container
+   - External center-aligned labels below strip (No overlays on artwork)
+   - Studio floor shadow & ambient accent glow
+   ========================================================================== */
+
+.reel-flux-section {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  background-color: #0a1210;
+  color: #f5f7f6;
+  padding: clamp(48px, 6vw, 80px) 0 clamp(60px, 7vw, 92px);
+  overflow: hidden;
+  box-sizing: border-box;
+  outline: none;
+}
+
+/* Clean Eyebrow Header */
+.reel-header {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: clamp(20px, 3vw, 36px);
+  padding: 0 24px;
+}
+
+.reel-header .eyebrow {
+  display: inline-block;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a7f3d0;
+  margin: 0;
+}
+
+/* 3D WebGL Flat-with-Flare Strip Canvas Container */
+.reel-canvas-container {
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  z-index: 1;
+}
+
+.reel-canvas-container:active {
+  cursor: grabbing;
+}
+
+.reel-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Faint Studio Floor Shadow Below Strip */
+.reel-floor-shadow {
+  position: relative;
+  width: 80%;
+  max-width: 1100px;
+  height: 36px;
+  margin: -18px auto 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.15) 50%, transparent 80%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* External Center-Aligned Details Box (Single Centered Column) */
+.reel-details-box {
+  position: relative;
+  z-index: 3;
+  max-width: 680px;
+  margin: clamp(24px, 3.5vw, 36px) auto 0;
+  padding: 0 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Fixed Height Content Area for Smooth Cross-Fade & No Shift */
+.reel-details-content {
+  min-height: 220px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: reelSlideFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes reelSlideFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* a) Meta Row: 13px, 68% white, tabular numbers, uppercase 0.08em tracking */
+.reel-meta-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2px;
+}
+
+.reel-counter {
+  font-family: var(--mono, monospace);
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.reel-divider {
+  display: inline-block;
+  margin: 0 12px;
+  color: var(--text-muted, rgba(244, 247, 246, 0.68));
+  user-select: none;
+}
+
+.reel-category {
+  color: var(--text-muted, rgba(244, 247, 246, 0.68));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+.reel-year {
+  font-family: var(--mono, monospace);
+  color: var(--text-muted, rgba(244, 247, 246, 0.68));
+  font-size: 13px;
+}
+
+.reel-counter {
+  color: var(--accent-text, #7FE3C6);
+  font-weight: 700;
+}
+
+/* b) Title: clamp(28px, 4vw, 48px), near-white #F4F7F6, weight 600 */
+.reel-title {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--text-strong, #F4F7F6);
+  margin: 14px 0 12px;
+  max-width: 24ch;
+}
+
+/* c) One-line Description: 80% white, max-width 52ch, centered */
+.reel-description {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: clamp(14px, 1.25vw, 16px);
+  line-height: 1.55;
+  color: var(--text-body, rgba(244, 247, 246, 0.80));
+  max-width: 52ch;
+  margin: 0 auto 20px;
+}
+
+/* d) "View project" Link: rendered as liquid-glass pill */
+.reel-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+}
+
+.reel-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong, #F4F7F6);
+  text-decoration: none;
+  min-height: 44px;
+  padding: 8px 22px;
+  cursor: pointer;
+  background: var(--GLASS_FILL, rgba(12, 26, 24, 0.42));
+  backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6));
+  -webkit-backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6));
+  border: 1px solid var(--GLASS_BORDER, rgba(255, 255, 255, 0.10));
+  box-shadow: var(--GLASS_HIGHLIGHT), var(--GLASS_SHADOW);
+  border-radius: var(--glass-radius-pill, 999px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.reel-view-link:hover {
+  background: rgba(18, 42, 38, 0.55);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42), var(--GLASS_HIGHLIGHT);
+}
+
+.reel-view-link:active {
+  transform: scale(0.98);
+}
+
+.reel-view-link:focus-visible {
+  outline: 2px solid var(--accent-text, #7FE3C6);
+  outline-offset: 3px;
+}
+
+/* e) Controls Row: 32px below in ONE horizontal row */
+.reel-controls-row {
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Ghost Circle Navigation Buttons: liquid glass */
+.reel-ghost-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--GLASS_BORDER, rgba(255, 255, 255, 0.16)) !important;
+  background: var(--GLASS_FILL, rgba(12, 26, 24, 0.42)) !important;
+  backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6)) !important;
+  -webkit-backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6)) !important;
+  color: #F4F7F6 !important;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+  box-shadow: var(--GLASS_HIGHLIGHT), var(--GLASS_SHADOW);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.reel-ghost-btn svg {
+  color: #F4F7F6 !important;
+  stroke: #F4F7F6 !important;
+  opacity: 1 !important;
+}
+
+.reel-ghost-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+.reel-ghost-btn:hover {
+  background: rgba(18, 42, 38, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.reel-ghost-btn:hover svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+.reel-ghost-btn:active {
+  transform: scale(0.96);
+}
+
+.reel-ghost-btn:focus-visible {
+  outline: 2px solid var(--accent-text, #7FE3C6);
+  outline-offset: 2px;
+}
+
+/* Progress Dashes: active dash longer and brighter */
+.reel-dashes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reel-dash {
+  height: 4px;
+  width: 16px;
+  border-radius: 2px;
+  background: rgba(244, 247, 246, 0.55) !important;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.reel-dash:hover {
+  background: rgba(255, 255, 255, 0.80) !important;
+}
+
+.reel-dash.active {
+  width: 34px;
+  background: #F4F7F6 !important;
+  box-shadow: 0 0 12px rgba(244, 247, 246, 0.45) !important;
+}
+
+.reel-dash:focus-visible {
+  outline: 2px solid var(--accent-text, #7FE3C6);
+  outline-offset: 2px;
+}
+
+/* Accessible Reduced-Motion & Non-WebGL Scroll-Snap Fallback */
+.reel-reduced-fallback {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.reel-reduced-card {
+  flex: 0 0 clamp(280px, 60vw, 680px);
+  scroll-snap-align: center;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.reel-reduced-card:hover {
+  transform: translateY(-4px);
+}
+
+.reel-reduced-card.active {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 24px 48px rgba(0, 0, 0, 0.6);
+}
+
+.reel-reduced-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Mobile Adjustments (375px) */
+@media (max-width: 640px) {
+  .reel-flux-section {
+    padding: 36px 0 52px;
+  }
+
+  .reel-details-box {
+    margin-top: 20px;
+    padding: 0 16px;
+  }
+
+  .reel-details-content {
+    min-height: 190px;
+  }
+
+  .reel-meta-row {
+    font-size: 11.5px;
+  }
+
+  .reel-divider {
+    margin: 0 8px;
+  }
+
+  .reel-title {
+    font-size: clamp(22px, 6vw, 32px);
+    margin: 10px 0 8px;
+  }
+
+  .reel-description {
+    font-size: 13.5px;
+    margin-bottom: 14px;
+    padding: 0 8px;
+  }
+
+  .reel-controls-row {
+    margin-top: 24px;
+    gap: 12px;
+  }
+
+  .reel-ghost-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .reel-dash {
+    width: 10px;
+  }
+
+  .reel-dash.active {
+    width: 24px;
+  }
+}

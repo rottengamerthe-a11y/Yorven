@@ -1,0 +1,446 @@
+/**
+ * Design Tokens & Liquid Glass System for Yorven
+ * Unified typography, WCAG AA/AAA contrast tokens, and liquid-glass surfaces.
+ */
+
+:root,
+[data-theme="dark"],
+.surface-dark {
+  /* ==========================================================================
+     A. Typography & Contrast Design Tokens (WCAG AA/AAA on #0A1210 dark surface)
+     ========================================================================== */
+  --text-strong: #F4F7F6;                  /* Titles, headings (17.5:1 on #0A1210) */
+  --text-body: rgba(244, 247, 246, 0.80); /* Subtitles, values, paragraphs (12.8:1) */
+  --text-muted: rgba(244, 247, 246, 0.68);/* Labels, captions, metadata tags (9.8:1, never lower) */
+  --accent-text: #7FE3C6;                 /* Small highlights, links, status dots only (12.2:1) */
+  --divider: rgba(255, 255, 255, 0.10);
+
+  /* Legacy remappings: guarantee no rogue dark-teal (#082D2C, #315B55) text renders on dark surfaces */
+  --teal: #F4F7F6;
+  --teal-soft: rgba(244, 247, 246, 0.80);
+  --line: rgba(255, 255, 255, 0.10);
+  --line-dark: rgba(255, 255, 255, 0.08);
+
+  /* Primary Brand Accents */
+  --lime: #d7ed83;
+  --green: #0ad2a0;
+  --mint: #c9ebaa;
+  --bg-dark: #0A1210;
+
+  /* ==========================================================================
+     B. Liquid Glass System Tokens (Dark Surface)
+     ========================================================================== */
+  --GLASS_BLUR: 18px;
+  --GLASS_FILL: rgba(12, 26, 24, 0.42);
+  --GLASS_FILL_DENSE: rgba(10, 20, 18, 0.60);
+  --GLASS_FILL_REFRACT: rgba(12, 26, 24, 0.35);
+  --GLASS_FILL_FALLBACK: rgba(14, 30, 28, 0.90);
+  --GLASS_RIM: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --GLASS_SATURATION: 1.6;
+  --GLASS_BRIGHTNESS: 1.05;
+  --GLASS_BORDER: rgba(255, 255, 255, 0.10);
+  --GLASS_HIGHLIGHT: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --GLASS_SHADOW: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  --glass-radius-pill: 999px;
+  --glass-radius-card: 22px;
+  --glass-radius-bar: 14px;
+}
+
+/* ==========================================================================
+   Light Surface Design Tokens (WCAG AA/AAA on #F4F0E6 / #F3EFE5 cream & #FFFFFF cards)
+   Applied automatically via data-theme="light", data-theme="cream", .surface-light, or .lp-light
+   ========================================================================== */
+[data-theme="light"],
+[data-theme="cream"],
+.surface-light,
+.lp-light {
+  --text-strong: #14201C;                  /* Titles, headings (14.8:1 on cream, 16.9:1 on white) */
+  --text-body: rgba(20, 32, 28, 0.80);    /* Subtitles, values, paragraphs (7.9:1 on cream, 9.2:1 on white) */
+  --text-muted: rgba(20, 32, 28, 0.66);   /* Labels, captions, metadata tags (5.9:1 on cream, 7.0:1 on white) */
+  --accent-text: #B3412C;                 /* Darker accent >= 4.5:1 on cream (4.54:1) and white (5.16:1) */
+  --divider: rgba(20, 32, 28, 0.12);      /* Hairlines and dividers on light surfaces */
+  --line: rgba(20, 32, 28, 0.12);
+  --line-dark: rgba(20, 32, 28, 0.08);
+
+  /* Legacy remappings inside light surfaces */
+  --teal: #14201C;
+  --teal-soft: rgba(20, 32, 28, 0.80);
+
+  /* Liquid Glass light fills */
+  --GLASS_FILL: rgba(255, 255, 255, 0.45);
+  --GLASS_FILL_DENSE: rgba(255, 255, 255, 0.65);
+  --GLASS_FILL_REFRACT: rgba(255, 255, 255, 0.38);
+  --GLASS_FILL_FALLBACK: rgba(255, 255, 255, 0.92);
+  --GLASS_RIM: linear-gradient(135deg, rgba(255, 255, 255, 0.70) 0%, rgba(20, 32, 28, 0.12) 100%);
+  --GLASS_BORDER: rgba(20, 32, 28, 0.12);
+  --GLASS_HIGHLIGHT: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --GLASS_SHADOW: 0 10px 30px rgba(20, 32, 28, 0.08);
+}
+
+/* ==========================================================================
+   Re-arm dark tokens inside nested dark cards within light sections (e.g. .lp-calc)
+   ========================================================================== */
+[data-theme="light"] [data-theme="dark"],
+[data-theme="cream"] [data-theme="dark"],
+.surface-light .surface-dark,
+.lp-light .surface-dark,
+.lp-light .lp-calc {
+  --text-strong: #F4F7F6;
+  --text-body: rgba(244, 247, 246, 0.80);
+  --text-muted: rgba(244, 247, 246, 0.68);
+  --accent-text: #7FE3C6;
+  --divider: rgba(255, 255, 255, 0.10);
+  --line: rgba(255, 255, 255, 0.10);
+  --line-dark: rgba(255, 255, 255, 0.08);
+
+  --teal: #F4F7F6;
+  --teal-soft: rgba(244, 247, 246, 0.80);
+
+  --GLASS_FILL: rgba(12, 26, 24, 0.42);
+  --GLASS_FILL_DENSE: rgba(10, 20, 18, 0.60);
+  --GLASS_FILL_REFRACT: rgba(12, 26, 24, 0.35);
+  --GLASS_FILL_FALLBACK: rgba(14, 30, 28, 0.90);
+  --GLASS_RIM: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --GLASS_BORDER: rgba(255, 255, 255, 0.10);
+  --GLASS_HIGHLIGHT: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --GLASS_SHADOW: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* ==========================================================================
+   Liquid Glass Base & Specular Reflection
+   ========================================================================== */
+
+.glass-surface,
+.glass-pill,
+.glass-card,
+.glass-bar,
+.glass-btn {
+  position: relative;
+  isolation: isolate;
+  background: var(--GLASS_FILL);
+  -webkit-backdrop-filter: blur(var(--GLASS_BLUR)) saturate(var(--GLASS_SATURATION)) brightness(var(--GLASS_BRIGHTNESS));
+  backdrop-filter: blur(var(--GLASS_BLUR)) saturate(var(--GLASS_SATURATION)) brightness(var(--GLASS_BRIGHTNESS));
+  border: 1px solid var(--GLASS_BORDER);
+  box-shadow: var(--GLASS_HIGHLIGHT), var(--GLASS_SHADOW);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+/* Specular highlight: static ::before radial highlight at top-left (white 10-14% to transparent) */
+.glass-surface::before,
+.glass-pill::before,
+.glass-card::before,
+.glass-bar::before,
+.glass-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Gradient rim: subtle 28% white top-left to 4% bottom-right edge line */
+.glass-surface::after,
+.glass-pill::after,
+.glass-card::after,
+.glass-bar::after,
+.glass-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--GLASS_RIM);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Ensure interactive / text children sit above specular pseudo-elements */
+.glass-surface > *,
+.glass-pill > *,
+.glass-card > *,
+.glass-bar > *,
+.glass-btn > * {
+  position: relative;
+  z-index: 3;
+}
+
+/* ==========================================================================
+   Liquid Glass Variants
+   ========================================================================== */
+
+/* 1. Tag Pills */
+.glass-pill {
+  border-radius: var(--glass-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-body);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.glass-pill.live {
+  color: var(--accent-text);
+  border-color: rgba(127, 227, 198, 0.25);
+}
+
+.glass-pill.live .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  box-shadow: 0 0 8px var(--accent-text);
+  display: inline-block;
+}
+
+/* 2. Panels / Framed Screenshot Cards */
+.glass-card {
+  border-radius: var(--glass-radius-card);
+  padding: 24px;
+}
+
+.glass-card.dense {
+  background: var(--GLASS_FILL_DENSE);
+}
+
+/* 3. Info Strip Bar (e.g. Domain / Role / Stack) */
+.glass-bar {
+  border-radius: var(--glass-radius-bar);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.glass-bar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.glass-bar-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.glass-bar-value {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-body);
+  margin: 0;
+}
+
+.glass-bar-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+/* 4. Glass Buttons & Controls */
+.glass-btn {
+  border-radius: var(--glass-radius-pill);
+  min-height: 44px;
+  padding: 10px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.glass-btn:hover {
+  background: rgba(18, 42, 38, 0.55);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42), var(--GLASS_HIGHLIGHT);
+}
+
+.glass-btn:active {
+  transform: scale(0.98);
+}
+
+.glass-btn:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+/* Circle variant for prev/next carousel controls */
+.glass-btn-circle {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+/* Progress Dash inside glass system */
+.glass-dash {
+  height: 4px;
+  width: 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.24);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-dash:hover {
+  background: rgba(255, 255, 255, 0.50);
+}
+
+.glass-dash.active {
+  width: 34px;
+  background: var(--text-strong);
+  box-shadow: 0 0 12px rgba(244, 247, 246, 0.45);
+}
+
+.glass-dash:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Background Color Glows & Texture (Makes glass refraction visually vivid)
+   ========================================================================== */
+
+.section-glow-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.section-glows {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.section-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.16;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.section-glow-1 {
+  top: -60px;
+  left: 8%;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, var(--accent-glow, #0ad2a0) 0%, rgba(10, 210, 160, 0) 70%);
+}
+
+.section-glow-2 {
+  top: 35%;
+  right: 5%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--accent-glow-secondary, #7fe3c6) 0%, rgba(127, 227, 198, 0) 70%);
+}
+
+.section-glow-3 {
+  bottom: -40px;
+  left: 20%;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, var(--accent-glow-tertiary, #8a93f0) 0%, rgba(138, 147, 240, 0) 70%);
+}
+
+/* Subtle static film grain overlay */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* ==========================================================================
+   Fallbacks & Accessibility
+   ========================================================================== */
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-surface,
+  .glass-pill,
+  .glass-card,
+  .glass-bar,
+  .glass-btn {
+    background: var(--GLASS_FILL_FALLBACK) !important;
+  }
+}
+
+/* Reduced transparency preference */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-surface,
+  .glass-pill,
+  .glass-card,
+  .glass-bar,
+  .glass-btn {
+    background: var(--GLASS_FILL_FALLBACK) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* High contrast mode / forced colors */
+@media (forced-colors: active) {
+  .glass-surface,
+  .glass-pill,
+  .glass-card,
+  .glass-bar,
+  .glass-btn {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid Highlight !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+  .glass-surface::before,
+  .glass-surface::after,
+  .glass-pill::before,
+  .glass-pill::after,
+  .glass-card::before,
+  .glass-card::after,
+  .glass-bar::before,
+  .glass-bar::after,
+  .glass-btn::before,
+  .glass-btn::after {
+    display: none !important;
+  }
+}

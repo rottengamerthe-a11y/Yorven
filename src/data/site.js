@@ -114,7 +114,7 @@ export const work = [
   {
     slug: 'racers-vault',
     label: 'Mobile Application',
-    title: 'Racers Vault',
+    title: "Racer's Vault",
     subtitle: 'The real-world supercar spotting platform & collectible digital garage',
     type: 'Mobile Experience · AI & Automotive',
     tagline: 'Computer vision vehicle recognition, GPS radar & collectible rarity vault',

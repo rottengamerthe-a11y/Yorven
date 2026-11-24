@@ -37,7 +37,7 @@ export function CountryCombobox({
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus()
+      searchInputRef.current.focus({ preventScroll: true })
     }
   }, [isOpen])
 
@@ -45,13 +45,13 @@ export function CountryCombobox({
     onChange?.(country.name)
     setIsOpen(false)
     setSearch('')
-    triggerRef.current?.focus()
+    triggerRef.current?.focus({ preventScroll: true })
   }
 
   function handleKeyDown(e) {
     if (e.key === 'Escape') {
       setIsOpen(false)
-      triggerRef.current?.focus()
+      triggerRef.current?.focus({ preventScroll: true })
     } else if (e.key === 'ArrowDown' && !isOpen) {
       e.preventDefault()
       setIsOpen(true)
@@ -87,25 +87,15 @@ export function CountryCombobox({
         aria-invalid={error ? 'true' : undefined}
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`country-trigger flex items-center justify-between w-full h-12 px-4 rounded-[4px] text-left transition-all duration-200 ${
-          error
-            ? 'border-[#ff6b6b] bg-[#051c1a] text-[#F4F0E6] ring-1 ring-[#ff6b6b]'
-            : 'border-[rgba(244,240,230,0.14)] bg-[#051c1a] text-[#F4F0E6] hover:border-[rgba(215,237,131,0.4)] focus:border-[#D7ED83] focus:ring-1 focus:ring-[#D7ED83]'
-        } border`}
+        className={`country-trigger ${error ? 'has-error' : ''}`}
       >
-        <span className="flex items-center gap-2 truncate">
-          <Globe size={15} className="text-[#8fa897] flex-shrink-0" />
-          {selectedCountry ? (
-            <span className="text-[#F4F0E6] font-medium">{selectedCountry.name}</span>
-          ) : (
-            <span className="text-[#8fa897]/70 font-normal">Select a country</span>
-          )}
+        <Globe size={18} className="country-trigger-globe" />
+        <span className="country-trigger-label">
+          {selectedCountry ? selectedCountry.name : 'Select a country'}
         </span>
         <ChevronDown
-          size={16}
-          className={`text-[#8fa897] transition-transform duration-200 flex-shrink-0 ${
-            isOpen ? 'rotate-180 text-[#D7ED83]' : ''
-          }`}
+          size={14}
+          className={`country-trigger-chevron ${isOpen ? 'is-open' : ''}`}
         />
       </button>
 
@@ -117,25 +107,27 @@ export function CountryCombobox({
         <div
           id={`${id}-listbox`}
           role="listbox"
-          className="country-dropdown absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-hidden rounded-[4px] border border-[rgba(244,240,230,0.18)] bg-[#072625] shadow-2xl backdrop-blur-xl"
+          data-lenis-prevent="true"
+          className="country-dropdown"
+          onWheel={(e) => e.stopPropagation()}
         >
           {/* Search box inside dropdown */}
-          <div className="search-wrap sticky top-0 z-10 flex items-center gap-2 p-2.5 border-b border-[rgba(244,240,230,0.1)] bg-[#072625]">
-            <Search size={14} className="text-[#8fa897]" />
+          <div className="country-search-wrap">
+            <Search size={15} className="country-search-icon" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="Search countries..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-transparent text-[13px] text-[#F4F0E6] placeholder-[#8fa897]/60 outline-none"
+              className="country-search-input"
             />
           </div>
 
           {/* Country Options list */}
-          <div className="options-scroll max-h-48 overflow-y-auto py-1">
+          <div className="country-options-scroll" data-lenis-prevent="true">
             {filteredCountries.length === 0 ? (
-              <div className="p-3 text-center text-[13px] text-[#8fa897]">
+              <div className="country-no-results">
                 No country found matching "{search}"
               </div>
             ) : (
@@ -148,14 +140,10 @@ export function CountryCombobox({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => handleSelect(c)}
-                    className={`flex items-center justify-between w-full px-3.5 py-2 text-[13px] text-left transition-colors ${
-                      isSelected
-                        ? 'bg-[rgba(215,237,131,0.12)] text-[#D7ED83] font-semibold'
-                        : 'text-[#c8dacd] hover:bg-[rgba(244,240,230,0.06)] hover:text-[#F4F0E6]'
-                    }`}
+                    className={`country-option-item ${isSelected ? 'selected' : ''}`}
                   >
                     <span>{c.name}</span>
-                    {isSelected && <Check size={14} className="text-[#D7ED83]" />}
+                    {isSelected && <Check size={15} className="country-option-check" />}
                   </button>
                 )
               })
@@ -163,6 +151,172 @@ export function CountryCombobox({
           </div>
         </div>
       )}
+
+      {/* Scoped CSS for dropdown panel, search input, and option items */}
+      <style>{`
+        .country-combobox-wrap {
+          position: relative;
+          width: 100%;
+        }
+        .country-trigger {
+          display: flex !important;
+          width: 100% !important;
+          align-items: center !important;
+          gap: 10px !important;
+          padding: 0 14px !important;
+          min-height: 48px !important;
+          height: 48px;
+          border-radius: 8px;
+          text-align: left;
+          background: #051c1a;
+          color: #F4F7F6;
+          border: 1px solid rgba(244, 240, 230, 0.14);
+          cursor: pointer;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          overflow: hidden;
+        }
+        .country-trigger:hover {
+          border-color: rgba(215, 237, 131, 0.4);
+        }
+        .country-trigger:focus-visible {
+          outline: none;
+          border-color: #D7ED83;
+          box-shadow: 0 0 0 1px #D7ED83;
+        }
+        .country-trigger.has-error {
+          border-color: #ff6b6b;
+          box-shadow: 0 0 0 1px #ff6b6b;
+        }
+        .country-trigger-globe {
+          width: 18px !important;
+          height: 18px !important;
+          flex-shrink: 0 !important;
+          color: #8fa897;
+          display: block;
+        }
+        .country-trigger-label {
+          flex: 1 !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          line-height: 1 !important;
+          font-size: 14px;
+          color: #F4F7F6 !important;
+        }
+        .country-trigger-chevron {
+          width: 14px !important;
+          height: 14px !important;
+          flex-shrink: 0 !important;
+          margin-left: auto !important;
+          color: #F4F7F6 !important;
+          display: block;
+          transition: transform 0.2s ease;
+        }
+        .country-trigger-chevron.is-open {
+          transform: rotate(180deg);
+        }
+        .country-dropdown {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: calc(100% + 6px);
+          z-index: 100;
+          max-height: 320px;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 16px;
+          background: rgba(10, 30, 28, 0.94);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
+          box-sizing: border-box;
+        }
+        .country-search-wrap {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          padding: 10px 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+          background: rgba(10, 30, 28, 0.96);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+        .country-search-icon {
+          position: absolute;
+          left: 26px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #8fa897;
+          pointer-events: none;
+          z-index: 3;
+        }
+        .country-search-input {
+          display: block;
+          width: 100%;
+          padding: 8px 12px 8px 40px !important;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          color: #F4F7F6;
+          font-size: 13px;
+          outline: none;
+          box-sizing: border-box;
+        }
+        .country-search-input:focus {
+          border-color: #D7ED83;
+          background: rgba(255, 255, 255, 0.10);
+        }
+        .country-search-input::placeholder {
+          color: rgba(244, 247, 246, 0.45);
+        }
+        .country-options-scroll {
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .country-option-item {
+          display: flex !important;
+          align-items: center;
+          justify-content: space-between;
+          width: 100% !important;
+          text-align: left !important;
+          background: transparent !important;
+          color: #F4F7F6 !important;
+          padding: 10px 14px !important;
+          border: none !important;
+          border-radius: 8px !important;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 1.4;
+          box-sizing: border-box !important;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .country-option-item:hover,
+        .country-option-item.selected {
+          background: rgba(255, 255, 255, 0.10) !important;
+          color: #FFFFFF !important;
+        }
+        .country-option-item.selected {
+          font-weight: 600;
+        }
+        .country-option-check {
+          color: #D7ED83;
+          flex-shrink: 0;
+        }
+        .country-no-results {
+          padding: 14px;
+          text-align: center;
+          font-size: 13px;
+          color: rgba(244, 247, 246, 0.6);
+        }
+      `}</style>
 
       {/* Inline Validation Error Message */}
       {error && (

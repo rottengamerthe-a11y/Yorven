@@ -1,0 +1,208 @@
+/**
+ * Liquid Glass Stylesheet
+ *
+ * Universal physical glass styling:
+ * - Real SVG refraction (Chromium)
+ * - Frosted blur fallback (Safari, Firefox, Mobile)
+ * - Solid high-contrast fallback (Reduced Transparency)
+ * - Crisp specular sheen and gradient rims
+ */
+
+/* ==========================================================================
+   1. Base Liquid Glass Container
+   ========================================================================== */
+
+.liquid-glass-wrapper {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  border-radius: var(--lg-radius, 14px);
+  /* Pure layout wrapper — background & backdrop-filter live exclusively on .liquid-glass-backdrop */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dedicated isolated background layer for backdrop-filter (eliminates ghosting) */
+.liquid-glass-backdrop {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--lg-bg, var(--GLASS_FILL));
+  border: 1px solid var(--lg-border, var(--GLASS_BORDER));
+  box-shadow: var(--lg-shadow, var(--GLASS_SHADOW));
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Ensure backdrop-filter creates a clean containing layer exclusively on the empty background div */
+.liquid-glass-wrapper.lg-variant-frost .liquid-glass-backdrop,
+html[data-glass="frost"] .liquid-glass-backdrop {
+  -webkit-backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6)) brightness(var(--GLASS_BRIGHTNESS, 1.05));
+  backdrop-filter: blur(var(--GLASS_BLUR, 18px)) saturate(var(--GLASS_SATURATION, 1.6)) brightness(var(--GLASS_BRIGHTNESS, 1.05));
+}
+
+html[data-glass="refract"] .liquid-glass-wrapper.lg-variant-refract .liquid-glass-backdrop {
+  /* Applied dynamically via inline style backdrop-filter: url(#filterId) */
+  -webkit-backdrop-filter: blur(2px) saturate(1.4);
+  backdrop-filter: blur(2px) saturate(1.4);
+}
+
+/* ==========================================================================
+   2. Specular Highlight & Gradient Rim
+   ========================================================================== */
+
+/* Specular highlight: static ::before radial glint at top-left */
+.liquid-glass-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 58%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Light surface specular glint */
+[data-theme="light"] .liquid-glass-backdrop::before,
+[data-theme="cream"] .liquid-glass-backdrop::before,
+.surface-light .liquid-glass-backdrop::before,
+.lp-light .liquid-glass-backdrop::before,
+.nav-theme-light .liquid-glass-backdrop::before {
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 58%);
+}
+
+/* Gradient rim: subtle 28% white top-left to 4% bottom-right edge line */
+.liquid-glass-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-rim, var(--GLASS_RIM));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Content layer sits above backdrop layer with z-index 2 */
+.liquid-glass-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: inherit;
+  align-items: inherit;
+  justify-content: inherit;
+  gap: inherit;
+}
+
+/* ==========================================================================
+   3. Pre-configured Shape Variants
+   ========================================================================== */
+
+.liquid-glass-pill {
+  --lg-radius: 999px;
+  border-radius: 999px;
+  padding: 8px 18px;
+}
+
+.liquid-glass-card {
+  --lg-radius: 22px;
+  border-radius: 22px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.liquid-glass-bar {
+  --lg-radius: 14px;
+  border-radius: 14px;
+  padding: 18px 28px;
+  display: flex;
+}
+
+.liquid-glass-btn {
+  --lg-radius: 999px;
+  border-radius: 999px;
+  padding: 12px 24px;
+  cursor: pointer;
+}
+
+.liquid-glass-btn:hover {
+  transform: translateY(-1px);
+}
+
+.liquid-glass-btn:active {
+  transform: translateY(1px);
+}
+
+/* ==========================================================================
+   4. Surface Themes (Dark vs Light Surfaces)
+   ========================================================================== */
+
+/* Dark Surface (Default) */
+.liquid-glass-wrapper {
+  --lg-bg: rgba(12, 26, 24, 0.40);
+  --lg-border: rgba(255, 255, 255, 0.10);
+  --lg-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 10px 30px rgba(0, 0, 0, 0.35);
+  --lg-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.04) 100%);
+  color: var(--text-strong, #F4F7F6);
+}
+
+.liquid-glass-wrapper.lg-variant-refract {
+  --lg-bg: rgba(12, 26, 24, 0.32);
+}
+
+/* Light Surface */
+[data-theme="light"] .liquid-glass-wrapper,
+[data-theme="cream"] .liquid-glass-wrapper,
+.surface-light .liquid-glass-wrapper,
+.lp-light .liquid-glass-wrapper {
+  --lg-bg: rgba(255, 255, 255, 0.45);
+  --lg-border: rgba(20, 32, 28, 0.12);
+  --lg-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(20, 32, 28, 0.06), 0 10px 30px rgba(20, 32, 28, 0.08);
+  --lg-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(20, 32, 28, 0.12) 100%);
+  color: var(--text-strong, #14201C);
+}
+
+[data-theme="light"] .liquid-glass-wrapper.lg-variant-refract,
+[data-theme="cream"] .liquid-glass-wrapper.lg-variant-refract,
+.surface-light .liquid-glass-wrapper.lg-variant-refract,
+.lp-light .liquid-glass-wrapper.lg-variant-refract {
+  --lg-bg: rgba(255, 255, 255, 0.36);
+}
+
+/* ==========================================================================
+   5. Fallbacks (prefers-reduced-transparency & forced-colors)
+   ========================================================================== */
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-glass-wrapper {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(14, 30, 28, 0.95) !important;
+  }
+
+  [data-theme="light"] .liquid-glass-wrapper,
+  [data-theme="cream"] .liquid-glass-wrapper,
+  .surface-light .liquid-glass-wrapper,
+  .lp-light .liquid-glass-wrapper {
+    background: rgba(255, 255, 255, 0.96) !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .liquid-glass-wrapper {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: 2px solid CanvasText !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+}

@@ -18,8 +18,12 @@ import {
 import { HERO, PROOF, PROBLEM, SOLUTION, HOW, FAQ, CTA } from './content'
 import { modernClasses } from '../data/site'
 import { SafeImage } from '../components/ui/SafeImage'
-import { GradientBackground } from '../components/GradientBackground'
 import { ButtonRounded } from '../components/ui/button-rounded'
+import { CinematicHero } from './CinematicHero'
+import { ReelFluxCarousel } from '../components/ReelFluxCarousel'
+export { ReelFluxCarousel }
+import WakeSlider from '../components/WakeSlider'
+import SlidingNumber from '../components/ui/SlidingNumber'
 import './landing.css'
 
 /* ---------- helpers ---------- */
@@ -66,206 +70,7 @@ function Heading({ lines, className = '' }) {
 /* ---------- 1. HERO ---------- */
 
 export function Hero() {
-  const stageWrapperRef = useRef(null)
-
-  useEffect(() => {
-    const el = stageWrapperRef.current
-    if (!el) return
-
-    const updateScale = () => {
-      const parent = el.closest('.hero-figma-right') || el.parentElement
-      const w = parent ? parent.getBoundingClientRect().width : el.getBoundingClientRect().width
-      if (w > 0) {
-        const scale = Math.min(1, w / 540)
-        el.style.setProperty('--stage-scale', scale.toFixed(4))
-      }
-    }
-
-    updateScale()
-    const ro = new ResizeObserver(updateScale)
-    ro.observe(el)
-    if (el.parentElement) ro.observe(el.parentElement)
-    window.addEventListener('resize', updateScale)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', updateScale)
-    }
-  }, [])
-
-  return (
-    <section className="hero-figma-section" data-theme="teal">
-      {/* 1) shadcn.io Gradient WebGL2 Animated Shader Background */}
-      <GradientBackground
-        type="linear"
-        angle={118}
-        colors={["#0a1210", "#0f3b33", "#16b5a3", "#12372f", "#3fbf4a", "#0f2a25", "#7f93d6", "#0a1210"]}
-        scale={1.3}
-        warp={1.4}
-        detail={0.55}
-        softness={0.85}
-        contrast={1.25}
-        intensity={1.25}
-        flow={1.2}
-        speed={1.2}
-        grain={0.4}
-        interactive={true}
-        quality={0.75}
-        backgroundColor="#0a1210"
-        fallback="radial-gradient(circle at 15% 10%, rgba(185,196,191,0.13), transparent 50%), #0a1210"
-      />
-
-      <div className="hero-figma-container">
-        {/* Left Column (about 55% width, vertically distributed) */}
-        <div className="hero-figma-left">
-          <p className="hero-figma-top-label">
-            IDEAS INTO INTERFACES, INTERFACES INTO IMPACT.
-          </p>
-
-          <div className="hero-figma-main-content">
-            <h1 className="hero-figma-heading">
-              <span className="hero-heading-line">Launch Your</span>
-              <br />
-              <span className="hero-heading-line">Products</span>
-            </h1>
-
-            <p className="hero-figma-subtext">
-              We're Yorven. An independent studio<br className="hero-wrap-break" />
-              turning ambitious ideas into websites,<br className="hero-wrap-break" />
-              apps and systems that hold up.
-            </p>
-
-            <div className="hero-figma-buttons">
-              <a href="/contact" className="hero-btn-pill-primary">
-                <span>Bring us your idea</span>
-                <ArrowUpRight size={20} strokeWidth={2} className="hero-pill-arrow-svg" aria-hidden="true" />
-              </a>
-
-              <a href="#proof" className="hero-btn-text-secondary">
-                <span>Explore our work</span>
-                <ArrowDown size={14} strokeWidth={2.5} className="hero-text-arrow-svg" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-
-          <div className="hero-figma-scroll-hint">
-            <span>SCROLL TO SEE THE WORK</span>
-            <ArrowDown size={11} strokeWidth={2} className="hero-scroll-arrow-svg" aria-hidden="true" />
-          </div>
-        </div>
-
-        {/* Right Column (about 40% width, vertically centered, real live components) */}
-        <div className="hero-figma-right" aria-label="Selected product works by Yorven">
-          <div className="hero-stage-float-wrapper">
-            <div className="hero-stage-scale-wrapper" ref={stageWrapperRef}>
-              <div className="hero-art-stage">
-                {/* Concentric circles contour */}
-                <svg className="hero-stage-circles" viewBox="0 0 540 520" fill="none" aria-hidden="true">
-                  <circle cx="270" cy="260" r="140" stroke="rgba(45, 212, 191, 0.12)" strokeWidth="1" />
-                  <circle cx="270" cy="260" r="210" stroke="rgba(45, 212, 191, 0.08)" strokeWidth="1" />
-                  <circle cx="270" cy="260" r="280" stroke="rgba(45, 212, 191, 0.05)" strokeWidth="1" />
-                </svg>
-
-                {/* 1. Desktop Dashboard: ProofPay (PayperAI) */}
-                <div className="hero-card hero-card-desktop">
-                  <div className="h-card-bar">
-                    <span className="dot dot-teal" />
-                    <span className="dot dot-teal" />
-                    <span className="dot dot-teal" />
-                    <span className="h-bar-url">proofpay.ai</span>
-                    <span className="h-bar-badge">Live System</span>
-                  </div>
-                  <div className="h-desktop-content">
-                    <div className="h-desktop-kpis">
-                      <div className="h-dkpi">
-                        <small>OUTSTANDING</small>
-                        <strong>$34,500</strong>
-                      </div>
-                      <div className="h-dkpi">
-                        <small>AUTO-RECOVERED</small>
-                        <strong className="text-green">$104,200</strong>
-                      </div>
-                    </div>
-                    <div className="h-desktop-rows">
-                      <div className="h-drow alert">
-                        <div className="h-drow-meta">
-                          <b>Apex Logistics Ltd</b>
-                          <small>INV-041 · 16d overdue</small>
-                        </div>
-                        <span className="h-drow-amt">$8,500</span>
-                      </div>
-                      <div className="h-drow">
-                        <div className="h-drow-meta">
-                          <b>Kinetix Cloud Corp</b>
-                          <small>INV-039 · Due in 3d</small>
-                        </div>
-                        <span className="h-drow-amt">$14,200</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Mobile Device: Racers Vault (Porsche 911 GT3 R Grello) */}
-                <div className="hero-card hero-card-phone">
-                  <div className="h-phone-notch"><span /></div>
-                  <div className="h-phone-screen">
-                    <img
-                      src="/projects/racers-vault/porsche-gt3r-grello.webp"
-                      alt="Porsche 911 GT3 R Grello in Racers Vault"
-                      className="h-phone-img"
-                      width="576"
-                      height="930"
-                    />
-                  </div>
-                </div>
-
-                {/* 3. Bot Platform: Aurix Discord Engine */}
-                <div className="hero-card panel-aurix">
-                  <div className="h-bot-id">
-                    <div className="h-bot-avatar-wrap">
-                      <img
-                        src="/projects/aurix/aurix-flame-avatar.webp"
-                        alt="Aurix"
-                        className="h-bot-avatar-img"
-                        width="460"
-                        height="460"
-                      />
-                    </div>
-                    <div className="h-bot-title-row">
-                      <strong>Aurix</strong>
-                      <span className="h-bot-app">APP</span>
-                    </div>
-                    <span className="h-bot-shards">● 16 Shards</span>
-                  </div>
-                  <div className="h-bot-embed">
-                    <div className="h-embed-title">
-                      <svg
-                        className="h-spin-sparkle-svg"
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4L12 0Z" />
-                      </svg>
-                      <b>Spin Complete • SUCCESS</b>
-                    </div>
-                    <p className="h-embed-payout">
-                      Gained <b>154 aura</b> &amp; <b>103 XP</b>
-                    </p>
-                    <div className="h-embed-row">
-                      <span className="h-cmd-pill">/spin</span>
-                      <span className="h-wallet-note">174,381 aura</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+  return <CinematicHero />
 }
 
 export function MobileScreenshotCarousel({ screens = [] }) {
@@ -479,17 +284,28 @@ export function ModernClassesProofCard() {
                 title="Click to view next screen"
               >
                 <div className="mc-phone-viewport">
-                  {current && (
-                    <SafeImage
-                      src={current.src}
-                      alt={current.alt}
-                      className="mc-phone-screen"
-                      width="576"
-                      height="1024"
-                      loading="lazy"
-                      aspectRatio="576 / 1024"
-                    />
-                  )}
+                  {/* Native Status Bar & Dynamic Island */}
+                  <div className="mc-phone-status-bar" aria-hidden="true">
+                    <span className="mc-phone-time">9:41</span>
+                    <div className="mc-phone-island" />
+                    <div className="mc-phone-status-icons">
+                      <span className="mc-status-network">5G</span>
+                      <span className="mc-status-battery" />
+                    </div>
+                  </div>
+                  <div className="mc-phone-content-wrap">
+                    {current && (
+                      <SafeImage
+                        src={current.src}
+                        alt={current.alt}
+                        className="mc-phone-screen"
+                        width="576"
+                        height="1024"
+                        loading="lazy"
+                        aspectRatio="576 / 1024"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -797,129 +613,91 @@ function CostOfDelay() {
   const c = PROBLEM.calc
   const [value, setValue] = useState(10000)
   const [months, setMonths] = useState(3)
-
-  const [displayValue, setDisplayValue] = useState(10000)
-  const [displayMonths, setDisplayMonths] = useState(3)
-  const [displayResult, setDisplayResult] = useState(30000)
   const [liveAnnouncement, setLiveAnnouncement] = useState('')
-
   const calcRef = useRef(null)
-  const [isSectionVisible, setIsSectionVisible] = useState(true)
 
-  useEffect(() => {
-    const el = calcRef.current
-    if (!el || typeof IntersectionObserver === 'undefined') return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsSectionVisible(entry.isIntersecting)
-      },
-      { threshold: 0.05 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (motionReduced()) {
-      setDisplayValue(value)
-      setDisplayMonths(months)
-      setDisplayResult(value * months)
-      return
-    }
-
-    if (!isSectionVisible) {
-      setDisplayValue(value)
-      setDisplayMonths(months)
-      setDisplayResult(value * months)
-      return
-    }
-
-    let rafId = null
-    const targetResult = value * months
-
-    const tick = () => {
-      let active = false
-
-      setDisplayValue((prev) => {
-        const diff = value - prev
-        if (Math.abs(diff) < 1) return value
-        active = true
-        return prev + diff * NUMBER_SMOOTHING
-      })
-
-      setDisplayMonths((prev) => {
-        const diff = months - prev
-        if (Math.abs(diff) < 0.02) return months
-        active = true
-        return prev + diff * NUMBER_SMOOTHING
-      })
-
-      setDisplayResult((prev) => {
-        const diff = targetResult - prev
-        if (Math.abs(diff) < 1) return targetResult
-        active = true
-        return prev + diff * NUMBER_SMOOTHING
-      })
-
-      if (active) {
-        rafId = requestAnimationFrame(tick)
-      }
-    }
-
-    rafId = requestAnimationFrame(tick)
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId)
-    }
-  }, [value, months, isSectionVisible])
-
-  const handleFinalChange = () => {
+  const handleValueChange = (newVal) => {
+    setValue(newVal)
     setLiveAnnouncement(
-      `${usd.format(value)} per month, delayed by ${months} ${months === 1 ? 'month' : 'months'}. Total estimated delay cost: ${usd.format(value * months)} ${c.resultLabel}.`
+      `$${newVal.toLocaleString()} per month, delayed by ${months} ${months === 1 ? 'month' : 'months'}. Total estimated delay cost: $${(newVal * months).toLocaleString()} ${c.resultLabel}.`
+    )
+  }
+
+  const handleMonthsChange = (newMonths) => {
+    setMonths(newMonths)
+    setLiveAnnouncement(
+      `$${value.toLocaleString()} per month, delayed by ${newMonths} ${newMonths === 1 ? 'month' : 'months'}. Total estimated delay cost: $${(value * newMonths).toLocaleString()} ${c.resultLabel}.`
     )
   }
 
   return (
-    <div className="lp-calc stagger-reveal" ref={calcRef}>
+    <div className="lp-calc stagger-reveal surface-dark" data-theme="dark" ref={calcRef}>
       <div className="lp-calc-inputs">
         <p className="eyebrow">{c.title}</p>
 
         <label htmlFor="lp-value">
-          {c.valueLabel}
-          <output>{usd.format(Math.round(displayValue))} / month</output>
+          <span>{c.valueLabel}</span>
+          <output>
+            $<SlidingNumber number={value} thousandSeparator="," /> / month
+          </output>
         </label>
-        <SmoothSlider
-          id="lp-value"
+        <WakeSlider
+          defaultValue={10000}
+          value={value}
           min={1000}
           max={50000}
           step={1000}
-          value={value}
-          onChange={setValue}
-          onFinalChange={handleFinalChange}
+          bars={32}
+          height={48}
+          restHeight={10}
+          gap={3}
+          fillColor="#7FE3C6"
+          trackColor="rgba(255, 255, 255, 0.12)"
+          crestColor="#D7ED83"
+          sensitivity={1}
+          reach={5}
+          skew={0.5}
+          glide={0.25}
+          smoothing={90}
           ariaLabel={c.valueLabel}
-          ariaValueText={`${usd.format(value)} per month`}
-          isSectionVisible={isSectionVisible}
+          onChange={handleValueChange}
+          className="lp-wake-slider"
         />
 
-        <label htmlFor="lp-months">
-          {c.monthsLabel}
-          <output>{Math.round(displayMonths)} {Math.round(displayMonths) === 1 ? 'month' : 'months'}</output>
+        <label htmlFor="lp-months" style={{ marginTop: '22px' }}>
+          <span>{c.monthsLabel}</span>
+          <output>
+            <SlidingNumber number={months} /> {months === 1 ? 'month' : 'months'}
+          </output>
         </label>
-        <SmoothSlider
-          id="lp-months"
+        <WakeSlider
+          defaultValue={3}
+          value={months}
           min={1}
           max={12}
           step={1}
-          value={months}
-          onChange={setMonths}
-          onFinalChange={handleFinalChange}
+          bars={24}
+          height={48}
+          restHeight={10}
+          gap={3}
+          fillColor="#7FE3C6"
+          trackColor="rgba(255, 255, 255, 0.12)"
+          crestColor="#D7ED83"
+          sensitivity={1}
+          reach={4}
+          skew={0.5}
+          glide={0.25}
+          smoothing={90}
           ariaLabel={c.monthsLabel}
-          ariaValueText={`${months} ${months === 1 ? 'month' : 'months'}`}
-          isSectionVisible={isSectionVisible}
+          onChange={handleMonthsChange}
+          className="lp-wake-slider"
         />
       </div>
 
       <div className="lp-calc-result" aria-live="polite">
-        <span className="lp-calc-number">{usd.format(Math.round(displayResult))}</span>
+        <span className="lp-calc-number">
+          $<SlidingNumber number={value * months} thousandSeparator="," />
+        </span>
         <span className="lp-calc-label">{c.resultLabel}</span>
         <p>{c.footnote}</p>
         <span className="sr-only" aria-atomic="true">
@@ -931,7 +709,7 @@ function CostOfDelay() {
 }
 
 export function Problem() {
-  return <section id="problem" className="section lp-section lp-light scroll-reveal" data-theme="cream">
+  return <section id="problem" className="section lp-section lp-light surface-light scroll-reveal" data-theme="light">
     <div className="container">
       <div className="section-heading">
         <div><p className="eyebrow">{PROBLEM.eyebrow}</p><Heading lines={PROBLEM.title} /></div>
@@ -1046,7 +824,7 @@ export function Solution({ servicesSlot }) {
 /* ---------- 5. HOW IT WORKS ---------- */
 
 export function HowItWorks() {
-  return <section id="how" className="section lp-section lp-light scroll-reveal" data-theme="cream">
+  return <section id="how" className="section lp-section lp-light surface-light scroll-reveal" data-theme="light">
     <div className="container">
       <div className="section-heading">
         <div><p className="eyebrow">{HOW.eyebrow}</p><Heading lines={HOW.title} /></div>
@@ -1088,7 +866,7 @@ export function Faq() {
 
 export function FinalCta() {
   const whatsapp = import.meta.env.VITE_WHATSAPP_URL
-  return <section className="final-cta-wrap lp-light" data-theme="cream">
+  return <section className="final-cta-wrap lp-light surface-light" data-theme="light">
     <div className="final-cta lp-cta container scroll-reveal">
       <div className="cta-grid">
         <p className="eyebrow">Ready when you are</p>

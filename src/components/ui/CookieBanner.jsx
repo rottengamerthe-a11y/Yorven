@@ -111,7 +111,7 @@ export function CookieBanner() {
           style={{
             background: '#a3e635',
             border: 'none',
-            color: '#082d2c',
+            color: '#0a1210',
             padding: '8px 18px',
             borderRadius: '6px',
             cursor: 'pointer',

@@ -1,11 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 72" role="img" aria-labelledby="title">
-  <title id="title">Yorven</title>
-  <defs>
-    <linearGradient id="wordmark-gradient" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#6ec7d4"/>
-      <stop offset=".52" stop-color="#b9df9f"/>
-      <stop offset="1" stop-color="#e5f58f"/>
-    </linearGradient>
-  </defs>
-  <text x="0" y="57" fill="url(#wordmark-gradient)" font-family="Georgia, Times New Roman, serif" font-size="62" font-weight="700" letter-spacing="-4">YORVEN</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 72" role="img" aria-labelledby="yorven-title">
+  <title id="yorven-title">Yorven</title>
+  <text
+    x="180"
+    y="52"
+    text-anchor="middle"
+    fill="#F4F7F6"
+    font-family="'Plus Jakarta Sans', 'Outfit', 'Manrope', system-ui, -apple-system, sans-serif"
+    font-size="46"
+    font-weight="900"
+    letter-spacing="5"
+  >YORVEN</text>
 </svg>

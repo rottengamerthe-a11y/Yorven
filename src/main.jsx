@@ -10,28 +10,35 @@ import { InsightCard } from './components/insights/InsightCard'
 import { ArticleProse } from './components/insights/ArticleProse'
 import { TableOfContents } from './components/insights/TableOfContents'
 import { assembleParticles } from './components/particleAssemble'
+import './tokens.css'
 import './styles.css'
 import { MotionHighlight, MotionHighlightItem } from './components/ui/motion-highlight'
 import { ButtonRounded } from './components/ui/button-rounded'
 import { CountryCombobox } from './components/ui/country-combobox'
+import { FormSelect } from './components/ui/form-select'
 import { Hero, Proof, Problem, Solution, HowItWorks, Faq, FinalCta, MobileScreenshotCarousel } from './landing/Landing'
+import { ReelFluxCarousel } from './components/ReelFluxCarousel'
 import { dispatchLead } from './services/leadDispatcher'
+import SlideCommit from './components/SlideCommit'
 import SEOHead from './components/seo/SEOHead'
 import { SafeImage } from './components/ui/SafeImage'
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from './components/legal/LegalPages'
 import { CookieBanner } from './components/ui/CookieBanner'
 import { initGA, trackPageView } from './services/analytics'
 import { AuthProvider } from './dashboard/context/AuthContext'
-import { DashboardLayout } from './dashboard/components/DashboardLayout'
-import { DashboardLogin } from './dashboard/pages/DashboardLogin'
-import { DashboardEnroll } from './dashboard/pages/DashboardEnroll'
-import { DashboardMfa } from './dashboard/pages/DashboardMfa'
-import { DashboardOverview } from './dashboard/pages/DashboardOverview'
-import { DashboardPages } from './dashboard/pages/DashboardPages'
-import { DashboardMetrics } from './dashboard/pages/DashboardMetrics'
-import { DashboardStatus } from './dashboard/pages/DashboardStatus'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
+import { LiquidGlass } from './components/LiquidGlass'
+
+const DashboardLayout = React.lazy(() => import('./dashboard/components/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
+const DashboardLogin = React.lazy(() => import('./dashboard/pages/DashboardLogin').then(m => ({ default: m.DashboardLogin })))
+const DashboardEnroll = React.lazy(() => import('./dashboard/pages/DashboardEnroll').then(m => ({ default: m.DashboardEnroll })))
+const DashboardMfa = React.lazy(() => import('./dashboard/pages/DashboardMfa').then(m => ({ default: m.DashboardMfa })))
+const DashboardOverview = React.lazy(() => import('./dashboard/pages/DashboardOverview').then(m => ({ default: m.DashboardOverview })))
+const DashboardPages = React.lazy(() => import('./dashboard/pages/DashboardPages').then(m => ({ default: m.DashboardPages })))
+const DashboardMetrics = React.lazy(() => import('./dashboard/pages/DashboardMetrics').then(m => ({ default: m.DashboardMetrics })))
+const DashboardStatus = React.lazy(() => import('./dashboard/pages/DashboardStatus').then(m => ({ default: m.DashboardStatus })))
+const GlassLab = React.lazy(() => import('./pages/GlassLab'))
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -106,41 +113,20 @@ function useScrollMotion() {
     const root = document.documentElement
     root.classList.add('motion-ready')
     root.classList.toggle('motion-reduced', reduced)
-    const themedSections = Array.from(document.querySelectorAll('[data-theme]'))
-    let themeFrame = 0
-    const updateTheme = () => {
-      themeFrame = 0
-      const viewportCenter = window.innerHeight * 0.5
-      let closest = themedSections[0]
-      let closestDistance = Number.POSITIVE_INFINITY
-      themedSections.forEach((section) => {
-        const rect = section.getBoundingClientRect()
-        const distance = Math.abs((rect.top + rect.height * 0.5) - viewportCenter)
-        if (distance < closestDistance) {
-          closest = section
-          closestDistance = distance
-        }
-      })
-      if (closest?.dataset.theme && root.dataset.theme !== closest.dataset.theme) root.dataset.theme = closest.dataset.theme
-    }
-    const queueThemeUpdate = () => {
-      if (!themeFrame) themeFrame = window.requestAnimationFrame(updateTheme)
-    }
+
     const observer = reduced ? null : new IntersectionObserver((entries) => entries.forEach((entry) => {
       if (entry.isIntersecting) {
         entry.target.classList.add('is-visible')
-        if (!entry.target.dataset.theme) observer.unobserve(entry.target)
+        observer.unobserve(entry.target)
       }
     }), { threshold: 0.12, rootMargin: '0px 0px -8% 0px' })
-    document.querySelectorAll('.scroll-reveal, .stagger-reveal, .process-grid, [data-theme]').forEach((element) => observer ? observer.observe(element) : element.classList.add('is-visible'))
+    document.querySelectorAll('.scroll-reveal, .stagger-reveal, .process-grid').forEach((element) => observer ? observer.observe(element) : element.classList.add('is-visible'))
     const onScroll = () => {
       root.classList.toggle('nav-scrolled', window.scrollY > 24)
-      queueThemeUpdate()
     }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', queueThemeUpdate, { passive: true })
     onScroll()
-    if (reduced) return () => { window.cancelAnimationFrame(themeFrame); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', queueThemeUpdate); root.removeAttribute('data-theme'); root.classList.remove('motion-ready', 'motion-reduced', 'nav-scrolled') }
+    if (reduced) return () => { window.removeEventListener('scroll', onScroll); root.classList.remove('motion-ready', 'motion-reduced', 'nav-scrolled') }
 
     const cleanups = []
     const revealTimer = window.setTimeout(() => {
@@ -148,6 +134,7 @@ function useScrollMotion() {
     }, 2000)
     const ctx = gsap.context(() => {
       const splitText = (element) => {
+        if (element.classList.contains('hero-headline-real') || element.closest('.hero-headline-real') || element.dataset.noSplit) return
         if (!element.dataset.splitSource) element.dataset.splitSource = element.innerHTML
         element.innerHTML = element.dataset.splitSource
         const label = element.getAttribute('aria-label') || element.textContent.trim()
@@ -180,10 +167,12 @@ function useScrollMotion() {
         element.dataset.split = 'true'
       }
 
-      const textTargets = document.querySelectorAll('h1, h2')
+      const textTargets = document.querySelectorAll('h1:not(.hero-headline-real):not([data-no-split]), h2:not([data-no-split])')
       textTargets.forEach(splitText)
       const resplitText = () => {
         textTargets.forEach((element) => {
+          if (element.classList.contains('hero-headline-real') || element.closest('.hero-headline-real') || element.dataset.noSplit) return
+          if (!element.dataset.splitSource) return
           element.innerHTML = element.dataset.splitSource
           element.dataset.split = 'false'
           splitText(element)
@@ -213,7 +202,7 @@ function useScrollMotion() {
         element.setAttribute('aria-label', element.dataset.roll)
       })
 
-      const headings = gsap.utils.toArray('h1, h2')
+      const headings = gsap.utils.toArray('h1:not(.hero-headline-real):not([data-no-split]), h2:not([data-no-split])')
       headings.forEach((heading) => {
         const chars = heading.querySelectorAll('.motion-char')
         gsap.set(chars, { yPercent: 110, rotate: 6, transformOrigin: '0 100%' })
@@ -221,7 +210,7 @@ function useScrollMotion() {
         gsap.to(chars, { yPercent: 0, rotate: 0, duration: 1.05, stagger: 0.025, ease: 'expo.out', delay: heading.closest('.hero') ? 0.1 : 0, clearProps: 'transform', scrollTrigger: trigger })
       })
 
-      gsap.utils.toArray('.lede, .body-copy, .section-intro, .page-intro, .hero-actions').forEach((element) => {
+      gsap.utils.toArray('.lede, .body-copy, .section-intro, .page-intro, .hero-actions:not(.cinematic-cta-group)').forEach((element) => {
         gsap.fromTo(element, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: 'expo.out', clearProps: 'transform,opacity', scrollTrigger: { trigger: element, start: 'top 88%', once: true } })
       })
 
@@ -271,7 +260,7 @@ function useScrollMotion() {
     document.fonts?.ready.then(refresh)
     window.addEventListener('load', refresh, { once: true })
     refresh()
-    return () => { window.clearTimeout(revealTimer); window.cancelAnimationFrame(themeFrame); cleanups.forEach((cleanup) => cleanup()); ctx.revert(); observer?.disconnect(); window.removeEventListener('load', refresh); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', queueThemeUpdate); root.removeAttribute('data-theme'); root.classList.remove('motion-ready', 'motion-reduced', 'nav-scrolled') }
+    return () => { window.clearTimeout(revealTimer); cleanups.forEach((cleanup) => cleanup()); ctx.revert(); observer?.disconnect(); window.removeEventListener('load', refresh); window.removeEventListener('scroll', onScroll); root.classList.remove('motion-ready', 'motion-reduced', 'nav-scrolled') }
   }, [])
 }
 
@@ -358,9 +347,40 @@ function MarqueeRow({ items, reverse = false }) {
   return <div ref={rowRef} className={`marquee-row ${reverse ? 'marquee-row-reverse' : 'marquee-row-forward'}`}>{renderTrack()}{renderTrack(true)}</div>
 }
 
+export function YorvenWordmark({ className, width = 360, height = 72 }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 360 72"
+      role="img"
+      aria-labelledby="yorven-wordmark-title"
+      width={width}
+      height={height}
+      style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+    >
+      <title id="yorven-wordmark-title">Yorven</title>
+      <text
+        x="180"
+        y="52"
+        textAnchor="middle"
+        fill="currentColor"
+        fontFamily="'Plus Jakarta Sans', 'Outfit', 'Manrope', system-ui, -apple-system, sans-serif"
+        fontSize="46"
+        fontWeight="900"
+        letterSpacing="5"
+      >
+        YORVEN
+      </text>
+    </svg>
+  )
+}
+
+export const NavThemeContext = React.createContext('dark')
+
 function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
   const [visible, setVisible] = useState(false)
   const ctaRef = useRef(null)
+  const navTheme = React.useContext(NavThemeContext)
 
   useEffect(() => {
     // Show after scrolling 400px
@@ -398,8 +418,15 @@ function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
   }, [])
 
   return (
-    <div ref={ctaRef} className={`sticky-bottom-cta ${visible ? 'is-visible' : ''}`} role="region" aria-label="Quick mobile action">
-      <div className="container sticky-cta-inner">
+    <div ref={ctaRef} className={`sticky-bottom-cta sticky-theme-${navTheme} ${visible ? 'is-visible' : ''}`} role="region" aria-label="Quick mobile action">
+      <LiquidGlass
+        as="div"
+        variant="frost"
+        shape="pill"
+        scale={-20}
+        chroma={0}
+        className="sticky-cta-inner"
+      >
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer" className="button button-lime sticky-btn">
             {label} <ArrowUpRight size={16} />
@@ -409,13 +436,16 @@ function StickyBottomCta({ label = 'Start a project', to = '/contact', href }) {
             {label} <ArrowUpRight size={16} />
           </Link>
         )}
-      </div>
+      </LiquidGlass>
     </div>
   )
 }
 
 function Layout({ children }) {
   const [open, setOpen] = useState(false)
+  const [navTheme, setNavTheme] = useState('dark')
+  const currentThemeRef = useRef('dark')
+  const lastSwitchTimeRef = useRef(0)
   const menuRef = useRef(null)
   const triggerRef = useRef(null)
   const location = useLocation()
@@ -430,6 +460,74 @@ function Layout({ children }) {
     : location.pathname.startsWith('/about')
     ? 'about'
     : null
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const lightSelector = '.lp-light, [data-theme="light"], [data-theme="cream"], .surface-light'
+
+    const checkNavTheme = () => {
+      try {
+        const now = performance.now()
+        const current = currentThemeRef.current
+        const navY = 48
+        const hysteresis = 16 // > 12px hysteresis
+
+        // Find elements under center x at nav height
+        const centerX = window.innerWidth / 2
+        const elements = document.elementsFromPoint(centerX, navY) || []
+        const sectionUnder = elements.find(el => !el.closest('.nav-wrap'))
+
+        let targetTheme = 'dark'
+        if (sectionUnder) {
+          const lightContainer = sectionUnder.closest(lightSelector)
+          if (lightContainer) {
+            const rect = lightContainer.getBoundingClientRect()
+            if (current === 'dark') {
+              // Switch to light only if well inside the light section (hysteresis)
+              if (rect.top <= navY - hysteresis && rect.bottom >= navY + hysteresis) {
+                targetTheme = 'light'
+              }
+            } else {
+              // Stay in light unless clearly outside (hysteresis)
+              if (rect.top <= navY + hysteresis && rect.bottom >= navY - hysteresis) {
+                targetTheme = 'light'
+              }
+            }
+          }
+        }
+
+        // Apply 150ms rate limit on theme flipping
+        if (targetTheme !== currentThemeRef.current) {
+          if (now - lastSwitchTimeRef.current >= 150) {
+            lastSwitchTimeRef.current = now
+            currentThemeRef.current = targetTheme
+            setNavTheme(targetTheme)
+          }
+        }
+      } catch (_) {}
+    }
+
+    checkNavTheme()
+
+    let rafId = null
+    const onScroll = () => {
+      if (rafId) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        checkNavTheme()
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     if (!open) return undefined
@@ -461,15 +559,24 @@ function Layout({ children }) {
     }
   }, [open])
 
-  return <>
-    <a className="skip-link" href="#main-content">Skip to content</a>
-    <div className="scroll-progress" aria-hidden="true" />
-    <div className={`nav-backdrop ${open ? 'is-open' : ''}`} onClick={close} aria-hidden="true" />
-    <header className="nav-wrap">
-      <nav className="nav container" aria-label="Primary navigation">
-        <Link className="logo" to="/" onClick={() => setOpen(false)}>
-          <img src="/yorven-wordmark.svg" alt="Yorven" width="360" height="72" />
-        </Link>
+  return (
+    <NavThemeContext.Provider value={navTheme}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <div className="scroll-progress" aria-hidden="true" />
+      <div className={`nav-backdrop ${open ? 'is-open' : ''}`} onClick={close} aria-hidden="true" />
+      <header className={`nav-wrap floating-pill-nav ${navTheme === 'light' ? 'nav-theme-light' : 'nav-theme-dark'}`}>
+        <LiquidGlass
+          as="nav"
+          variant="frost"
+          shape="custom"
+          scale={-20}
+          chroma={0}
+          className="nav container"
+          aria-label="Primary navigation"
+        >
+          <Link className="logo" to="/" onClick={() => setOpen(false)} aria-label="Yorven Home">
+            <YorvenWordmark className="logo-svg" width={112} height={24} />
+          </Link>
         <div
           ref={menuRef}
           id="primary-menu"
@@ -515,7 +622,28 @@ function Layout({ children }) {
               </NavLink>
             </MotionHighlightItem>
             <MotionHighlightItem value="work">
-              <NavLink to="/work" onClick={() => setOpen(false)}>Work</NavLink>
+              <NavLink
+                to="/work"
+                onClick={(e) => {
+                  setOpen(false)
+                  if (window.location.pathname === '/') {
+                    const el = document.getElementById('work')
+                    if (el) {
+                      e.preventDefault()
+                      if (window.location.hash !== '#work') {
+                        window.history.pushState(null, '', '/#work')
+                      }
+                      if (window.__lenis) {
+                        window.__lenis.scrollTo(el, { offset: -32, duration: 1.2 })
+                      } else {
+                        el.scrollIntoView({ behavior: 'smooth' })
+                      }
+                    }
+                  }
+                }}
+              >
+                Work
+              </NavLink>
             </MotionHighlightItem>
             <MotionHighlightItem value="insights">
               <NavLink to="/insights" onClick={() => setOpen(false)}>Insights</NavLink>
@@ -545,18 +673,24 @@ function Layout({ children }) {
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
-      </nav>
+      </LiquidGlass>
     </header>
-    <main id="main-content">{children || <Outlet />}</main>
-    <Footer />
-  </>
+      <main id="main-content">{children || <Outlet />}</main>
+      <Footer />
+    </NavThemeContext.Provider>
+  )
 }
 
 function Footer() {
   const whatsapp = import.meta.env.VITE_WHATSAPP_URL
   return <footer className="footer">
     <div className="container footer-grid">
-      <div><Link className="logo" to="/"><img src="/yorven-wordmark.svg" alt="Yorven" width="360" height="72" /></Link><p className="footer-note">Thoughtful digital products<br />for what’s next.</p></div>
+      <div>
+        <Link className="logo" to="/" aria-label="Yorven Home">
+          <YorvenWordmark className="logo-svg" width={112} height={24} />
+        </Link>
+        <p className="footer-note">Thoughtful digital products<br />for what’s next.</p>
+      </div>
       <div>
         <p className="eyebrow">Explore</p>
         <Link
@@ -653,7 +787,7 @@ function Home() {
   return (
     <div className="home-page-wrap">
       <Hero />
-      <Proof concepts={work.map((item) => <WorkCard key={item.slug} item={item} />)} />
+      <ReelFluxCarousel />
       <Problem />
       <Solution servicesSlot={<ServiceCards />} />
       <HowItWorks />
@@ -1516,18 +1650,17 @@ function ModernClassesCaseStudy({ item, nextItem }) {
   const screens = item.carouselScreens || []
   const current = screens[activeScreen] || screens[0]
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = 'teal'
-    return () => {
-      document.documentElement.removeAttribute('data-theme')
-    }
-  }, [])
-
   const nextScreen = () => setActiveScreen((prev) => (prev + 1) % screens.length)
   const prevScreen = () => setActiveScreen((prev) => (prev - 1 + screens.length) % screens.length)
 
   return (
-    <div className="mc-page-wrapper" data-theme="teal">
+    <div className="mc-page-wrapper section-glow-wrap" data-theme="teal">
+      <div className="section-glows" aria-hidden="true">
+        <div className="section-glow section-glow-1" style={{ '--accent-glow': '#316ab1' }} />
+        <div className="section-glow section-glow-2" style={{ '--accent-glow-secondary': '#0ad2a0' }} />
+        <div className="section-glow section-glow-3" style={{ '--accent-glow-tertiary': '#7fe3c6' }} />
+      </div>
+
       <article className="mc-editorial-page container">
       {/* Back Link */}
       <div className="mc-page-top">
@@ -1541,10 +1674,10 @@ function ModernClassesCaseStudy({ item, nextItem }) {
         <div className="mc-hero-editorial">
           {/* Small neutral badge */}
           <div className="mc-badge-row">
-            <span className="mc-badge-neutral">
-              <span className="mc-dot" /> Live on Google Play
+            <span className="mc-badge-neutral glass-pill live">
+              <span className="status-dot" aria-hidden="true" /> Live on Google Play
             </span>
-            <span className="mc-badge-neutral">
+            <span className="mc-badge-neutral glass-pill">
               Android Application · 2025–2026
             </span>
           </div>
@@ -1625,17 +1758,28 @@ function ModernClassesCaseStudy({ item, nextItem }) {
               title="Click to view next screenshot"
             >
               <div className="mc-phone-viewport">
-                {current && (
-                  <SafeImage
-                    src={current.src}
-                    alt={current.alt || current.title}
-                    className="mc-phone-img"
-                    width="576"
-                    height="1024"
-                    loading="lazy"
-                    aspectRatio="576 / 1024"
-                  />
-                )}
+                {/* Native Status Bar & Dynamic Island */}
+                <div className="mc-phone-status-bar" aria-hidden="true">
+                  <span className="mc-phone-time">9:41</span>
+                  <div className="mc-phone-island" />
+                  <div className="mc-phone-status-icons">
+                    <span className="mc-status-network">5G</span>
+                    <span className="mc-status-battery" />
+                  </div>
+                </div>
+                <div className="mc-phone-content-wrap">
+                  {current && (
+                    <SafeImage
+                      src={current.src}
+                      alt={current.alt || current.title}
+                      className="mc-phone-img"
+                      width="576"
+                      height="1024"
+                      loading="lazy"
+                      aspectRatio="576 / 1024"
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1811,86 +1955,99 @@ function CaseStudy() {
   }
 
   return (
-    <article className="cs-editorial-page container">
-      {/* 1. Calm Editorial Header */}
-      <header className="cs-editorial-header">
-        <Link to="/work" className="cs-back-link">
-          <ArrowLeft size={16} /> <span>Back to all work</span>
-        </Link>
+    <div className="section-glow-wrap">
+      <div className="section-glows" aria-hidden="true">
+        <div className="section-glow section-glow-1" style={{ '--accent-glow': item.accentColor || '#0ad2a0' }} />
+        <div className="section-glow section-glow-2" style={{ '--accent-glow-secondary': item.accentColor ? `${item.accentColor}cc` : '#7fe3c6' }} />
+        <div className="section-glow section-glow-3" style={{ '--accent-glow-tertiary': '#8a93f0' }} />
+      </div>
 
-        <div className="cs-hero-titles">
-          <div className="cs-category-row">
-            <span className="cs-meta-pill">{item.label}</span>
-            <span className="cs-meta-pill live">● {item.badge || 'Live in Production'}</span>
-            <span className="cs-meta-pill">{item.timeline || '2026'}</span>
-          </div>
-          <h1 className="cs-editorial-h1">{item.title}</h1>
-          <p className="cs-editorial-sub">{item.subtitle || item.description}</p>
-        </div>
-
-        {/* Minimal inline metadata line (uncluttered) */}
-        <div className="cs-inline-specs">
-          <span><b>Domain</b> {item.type}</span>
-          <span><b>Role</b> {item.role}</span>
-          <span><b>Stack</b> {item.stack}</span>
-        </div>
-      </header>
-
-      {/* 2. Primary Focal Showcase */}
-      <section className="cs-primary-showcase" aria-label="Product Showcase">
-        {item.slug === 'payper-ai' && <ProofpayAIShowcase item={item} />}
-        {item.slug === 'racers-vault' && <RacersVaultShowcase item={item} />}
-        {item.slug === 'aurix' && <AurixShowcase item={item} />}
-        {item.slug === 'modern-classes' && <ModernClassesShowcase item={item} />}
-      </section>
-
-      {/* 3. Editorial Story: Problem & Engineering */}
-      <section className="cs-editorial-story">
-        <div className="cs-story-grid">
-          <div className="cs-story-col">
-            <span className="cs-story-num">01 / THE CHALLENGE</span>
-            <h2 className="cs-story-h2">The Opportunity & Problem</h2>
-            <p>{item.problem}</p>
-          </div>
-
-          <div className="cs-story-col">
-            <span className="cs-story-num">02 / THE ARCHITECTURE</span>
-            <h2 className="cs-story-h2">How Yorven Engineered It</h2>
-            <p>{item.approach}</p>
-          </div>
-        </div>
-
-        {/* Clean Shipped Capabilities Chips */}
-        <div className="cs-clean-caps">
-          <span className="caps-label">Shipped Capabilities</span>
-          <div className="caps-row">
-            {item.screens.map((screen, idx) => (
-              <span key={idx} className="caps-pill">{screen}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Next Project & Footer CTA */}
-      <footer className="cs-editorial-footer">
-        <div className="cs-next-row">
-          <span className="next-label">Next Project</span>
-          <Link to={'/work/' + nextItem.slug} className="next-project-link">
-            <span>{nextItem.title}</span> <ArrowUpRight size={24} />
+      <article className="cs-editorial-page container">
+        {/* 1. Calm Editorial Header */}
+        <header className="cs-editorial-header">
+          <Link to="/work" className="cs-back-link">
+            <ArrowLeft size={16} /> <span>Back to all work</span>
           </Link>
-        </div>
 
-        <div className="cs-contact-banner">
-          <div>
-            <h2>Have something ambitious to build?</h2>
-            <p className="body-copy">We partner with founders and product teams to engineer production software with craft and care.</p>
+          <div className="cs-hero-titles">
+            <div className="cs-category-row">
+              <span className="cs-meta-pill glass-pill">{item.label}</span>
+              <span className="cs-meta-pill glass-pill live">
+                <span className="status-dot" aria-hidden="true" />
+                <span>{item.badge || 'Live in Production'}</span>
+              </span>
+              <span className="cs-meta-pill glass-pill">{item.timeline || '2026'}</span>
+            </div>
+            <h1 className="cs-editorial-h1">{item.title}</h1>
+            <p className="cs-editorial-sub">{item.subtitle || item.description}</p>
           </div>
-          <Link to="/contact" className="button button-green cs-cta-btn">
-            Start a project <ArrowUpRight size={16} />
-          </Link>
-        </div>
-      </footer>
-    </article>
+
+          {/* Minimal inline metadata line (uncluttered glass bar) */}
+          <div className="cs-inline-specs glass-bar" role="region" aria-label="Project Specifications">
+            <span><b>Domain</b> {item.type}</span>
+            <span className="cs-inline-specs-divider" aria-hidden="true" />
+            <span><b>Role</b> {item.role}</span>
+            <span className="cs-inline-specs-divider" aria-hidden="true" />
+            <span><b>Stack</b> {item.stack}</span>
+          </div>
+        </header>
+
+        {/* 2. Primary Focal Showcase */}
+        <section className="cs-primary-showcase" aria-label="Product Showcase">
+          {item.slug === 'payper-ai' && <ProofpayAIShowcase item={item} />}
+          {item.slug === 'racers-vault' && <RacersVaultShowcase item={item} />}
+          {item.slug === 'aurix' && <AurixShowcase item={item} />}
+          {item.slug === 'modern-classes' && <ModernClassesShowcase item={item} />}
+        </section>
+
+        {/* 3. Editorial Story: Problem & Engineering */}
+        <section className="cs-editorial-story">
+          <div className="cs-story-grid">
+            <div className="cs-story-col">
+              <span className="cs-story-num">01 / THE CHALLENGE</span>
+              <h2 className="cs-story-h2">The Opportunity & Problem</h2>
+              <p>{item.problem}</p>
+            </div>
+
+            <div className="cs-story-col">
+              <span className="cs-story-num">02 / THE ARCHITECTURE</span>
+              <h2 className="cs-story-h2">How Yorven Engineered It</h2>
+              <p>{item.approach}</p>
+            </div>
+          </div>
+
+          {/* Clean Shipped Capabilities Chips */}
+          <div className="cs-clean-caps">
+            <span className="caps-label">Shipped Capabilities</span>
+            <div className="caps-row">
+              {item.screens.map((screen, idx) => (
+                <span key={idx} className="caps-pill glass-pill">{screen}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Next Project & Footer CTA */}
+        <footer className="cs-editorial-footer">
+          <div className="cs-next-row">
+            <span className="next-label">Next Project</span>
+            <Link to={'/work/' + nextItem.slug} className="next-project-link">
+              <span>{nextItem.title}</span> <ArrowUpRight size={24} />
+            </Link>
+          </div>
+
+          <div className="cs-contact-banner">
+            <div>
+              <h2>Have something ambitious to build?</h2>
+              <p className="body-copy">We partner with founders and product teams to engineer production software with craft and care.</p>
+            </div>
+            <Link to="/contact" className="button button-green cs-cta-btn">
+              Start a project <ArrowUpRight size={16} />
+            </Link>
+          </div>
+        </footer>
+      </article>
+    </div>
   ); 
 }
 
@@ -1916,7 +2073,7 @@ function ServicesHub() {
             <article key={svc.slug} className="service-hub-card">
               <div className="sh-card-top">
                 <span className="sh-number">{svc.number}</span>
-                <span className="sh-icon-box"><Icon size={20} /></span>
+                <span className="sh-icon-box"><Icon size={20} strokeWidth={1.75} /></span>
               </div>
               <h2 className="sh-card-title">{svc.title}</h2>
               <p className="sh-card-desc">{svc.text}</p>
@@ -2508,12 +2665,12 @@ function Contact() {
     setStep(prev => Math.max(1, prev - 1))
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    if (formData.website) return // Honeypot
+  async function handleSlideConfirm() {
+    if (formData.website) return
     if (!formData.description.trim()) {
-      setError('Please provide a brief project description.')
-      return
+      const msg = 'Please provide a brief project description.'
+      setError(msg)
+      throw new Error(msg)
     }
     setError('')
     setSending(true)
@@ -2521,15 +2678,29 @@ function Contact() {
     try {
       const result = await dispatchLead({ ...formData })
       if (result && result.ok) {
-        setSent(true)
+        return result
       } else {
-        setError(result?.error || "We couldn't submit your booking. Please email projects@yorven.in directly or try again.")
+        const errMsg = result?.error || "We couldn't submit your booking. Please email projects@yorven.in directly or try again."
+        setError(errMsg)
+        throw new Error(errMsg)
       }
     } catch (submissionError) {
       console.error('[Contact] Submission error:', submissionError)
-      setError("We couldn't submit your booking. Please email projects@yorven.in directly or try again.")
+      const errMsg = submissionError.message || "We couldn't submit your booking. Please email projects@yorven.in directly or try again."
+      setError(errMsg)
+      throw submissionError
     } finally {
       setSending(false)
+    }
+  }
+
+  async function handleSubmit(event) {
+    if (event && event.preventDefault) event.preventDefault()
+    try {
+      await handleSlideConfirm()
+      setSent(true)
+    } catch (e) {
+      // Handled in handleSlideConfirm
     }
   }
 
@@ -2677,59 +2848,59 @@ function Contact() {
                     </label>
                     <label htmlFor="contact-type">
                       Project type *
-                      <select
+                      <FormSelect
                         id="contact-type"
                         required
                         name="type"
                         value={formData.type}
-                        onChange={(e) => updateField('type', e.target.value)}
-                        aria-invalid={error ? 'true' : undefined}
-                        aria-describedby={error ? 'contact-form-error' : undefined}
-                      >
-                        <option value="" disabled>Select project type</option>
-                        <option>Website / Marketing Platform</option>
-                        <option>Web Application / SaaS MVP</option>
-                        <option>Mobile Application (iOS & Android)</option>
-                        <option>Systems & Custom Infrastructure</option>
-                        <option>Something else</option>
-                      </select>
+                        onChange={(val) => updateField('type', val)}
+                        placeholder="Select project type"
+                        options={[
+                          'Website / Marketing Platform',
+                          'Web Application / SaaS MVP',
+                          'Mobile Application (iOS & Android)',
+                          'Systems & Custom Infrastructure',
+                          'Something else'
+                        ]}
+                        error={error && !formData.type ? error : ''}
+                      />
                     </label>
                     <label htmlFor="contact-budget">
                       Budget range (USD) *
-                      <select
+                      <FormSelect
                         id="contact-budget"
                         required
                         name="budget"
                         value={formData.budget}
-                        onChange={(e) => updateField('budget', e.target.value)}
-                        aria-invalid={error ? 'true' : undefined}
-                        aria-describedby={error ? 'contact-form-error' : undefined}
-                      >
-                        <option value="" disabled>Select USD budget range</option>
-                        <option>Under $5,000</option>
-                        <option>$5,000 – $15,000</option>
-                        <option>$15,000 – $30,000</option>
-                        <option>$30,000 – $50,000+</option>
-                        <option>Prefer to discuss</option>
-                      </select>
+                        onChange={(val) => updateField('budget', val)}
+                        placeholder="Select USD budget range"
+                        options={[
+                          'Under $5,000',
+                          '$5,000 – $15,000',
+                          '$15,000 – $30,000',
+                          '$30,000 – $50,000+',
+                          'Prefer to discuss'
+                        ]}
+                        error={error && !formData.budget ? error : ''}
+                      />
                     </label>
                     <label htmlFor="contact-timeline">
                       Target launch timeline *
-                      <select
+                      <FormSelect
                         id="contact-timeline"
                         required
                         name="timeline"
                         value={formData.timeline}
-                        onChange={(e) => updateField('timeline', e.target.value)}
-                        aria-invalid={error ? 'true' : undefined}
-                        aria-describedby={error ? 'contact-form-error' : undefined}
-                      >
-                        <option value="" disabled>Select launch window</option>
-                        <option>Exploring / Early planning</option>
-                        <option>Within 1–2 months</option>
-                        <option>Within 3–6 months</option>
-                        <option>Flexible</option>
-                      </select>
+                        onChange={(val) => updateField('timeline', val)}
+                        placeholder="Select launch window"
+                        options={[
+                          'Exploring / Early planning',
+                          'Within 1–2 months',
+                          'Within 3–6 months',
+                          'Flexible'
+                        ]}
+                        error={error && !formData.timeline ? error : ''}
+                      />
                     </label>
                   </div>
                 </div>
@@ -2780,11 +2951,11 @@ function Contact() {
                   <ButtonRounded
                     type="button"
                     variant="secondary"
-                    arrow="none"
+                    arrow="left"
                     onClick={handleBack}
-                    className="form-back-btn !text-[#082D2C] !border-[rgba(8,45,44,0.35)] hover:!border-[#082D2C] hover:!bg-[rgba(8,45,44,0.06)]"
+                    className="form-back-btn"
                   >
-                    <ArrowLeft size={16} /> Back
+                    Back
                   </ButtonRounded>
                 ) : <div />}
 
@@ -2799,15 +2970,23 @@ function Contact() {
                     Continue
                   </ButtonRounded>
                 ) : (
-                  <ButtonRounded
-                    type="submit"
-                    variant="accent"
-                    arrow="up-right"
+                  <SlideCommit
+                    label="Slide to book a free call"
+                    doneLabel="Call Booked"
+                    errorLabel="Booking failed"
+                    onConfirm={handleSlideConfirm}
+                    onDone={() => setSent(true)}
+                    onError={(err) => setError(err?.message || "We couldn't submit your booking. Please try again.")}
+                    trackColor="#051C1A"
+                    handleColor="#D7ED83"
+                    successColor="#0AD2A0"
+                    dangerColor="#E5484D"
+                    width={280}
+                    height={54}
+                    radius={27}
                     disabled={sending}
-                    className="form-submit-btn"
-                  >
-                    {sending ? 'Scheduling…' : 'Book a free call'}
-                  </ButtonRounded>
+                    className="contact-slide-commit"
+                  />
                 )}
               </div>
 
@@ -2833,7 +3012,9 @@ function Contact() {
 function DashboardRouteWrapper() {
   return (
     <AuthProvider>
-      <Outlet />
+      <React.Suspense fallback={null}>
+        <Outlet />
+      </React.Suspense>
     </AuthProvider>
   )
 }
@@ -2861,6 +3042,7 @@ export function AppRoutes() {
 
   return (
     <>
+      <div className="grain-overlay" aria-hidden="true" />
       <ScrollToTop />
       <SEOHead />
       <CookieBanner />
@@ -2895,6 +3077,7 @@ export function AppRoutes() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cookies" element={<CookiePolicy />} />
+          <Route path="/glass-lab" element={<React.Suspense fallback={null}><GlassLab /></React.Suspense>} />
           <Route
             path="*"
             element={
@@ -2940,7 +3123,7 @@ export function App() {
     }
 
     gsap.ticker.add(tickerCallback)
-    gsap.ticker.lagSmoothing(0)
+    gsap.ticker.lagSmoothing(500, 33)
 
     if (window.location.hash) {
       setTimeout(() => {
