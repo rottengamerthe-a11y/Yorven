@@ -96,15 +96,15 @@ export const FAQ = {
   items: [
     {
       q: 'How much does a project cost?',
-      a: 'Every project receives a fixed-price USD proposal with clear milestone deliverables and guaranteed timelines before work begins. Focused marketing sites and web apps typically range between $4,000 and $12,000, while comprehensive MVPs, mobile applications, and high-scale systems range between $15,000 and $35,000. You know the exact number upfront—no hidden overages or surprise hourly billing.'
+      a: 'Every project receives a clear, fixed-price USD proposal broken down by milestone deliverables before any work begins. Smaller engagements like a page redesign or UI revamp start at $500, while custom web applications, full-scale SaaS platforms, and complex multi-feature products scale based on specific feature scope, architecture, and timeline requirements. You always know the exact number upfront—no hidden fees or surprise hourly billing.'
     },
     {
       q: 'How do international payments and contracts work?',
-      a: 'We partner with founders and product teams globally across the US, UK, Europe, Australia, and worldwide. Contracts and invoices are in USD, and payments are settled securely via Stripe (major credit cards) or international wire transfer (SWIFT / ACH). You review and approve each weekly milestone build before releasing payment for the next stage.'
+      a: 'We partner with founders and product teams globally across the US, UK, Europe, Australia, and worldwide. Contracts and invoices are issued in USD, and payments are settled securely via Payoneer (supporting credit/debit cards, bank debits, and local receiving accounts) or international wire transfer (SWIFT / ACH). You review and approve each weekly milestone build before releasing payment for the next stage.'
     },
     {
       q: 'How do you handle time zones and communication?',
-      a: 'We support global clients smoothly with dedicated Slack or Discord channels, regular async video walkthroughs (Loom), and weekly working demos scheduled during overlapping hours that suit your local time zone.'
+      a: 'We adapt to whatever communication channel fits your team best—whether that is a dedicated WhatsApp chat for fast day-to-day messaging, a private Slack or Discord channel, or email. We support global clients across time zones with continuous async updates, regular video walkthroughs (Loom), and scheduled working demos during overlapping hours.'
     },
     {
       q: 'How long does an engagement typically take?',
